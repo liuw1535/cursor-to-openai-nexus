@@ -133,3 +133,7 @@ data/admin.json
 data/api_keys.json
 data/invalid_cookies.json
 .env.*
+
+# 测试脚本
+test-*.js
+src/utils/test-*.js

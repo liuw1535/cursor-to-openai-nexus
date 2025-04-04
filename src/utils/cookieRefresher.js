@@ -480,15 +480,66 @@ async function extractCookiesFromCsvFile(csvFilePath) {
     console.log(`尝试从CSV文件提取cookies (尝试 ${attempt}/${maxExtractAttempts})...`);
     
     try {
-      // 使用新的提取模块
-      const cookies = await extractCookiesFromCsv(csvFilePath);
-      
-      if (cookies && cookies.length > 0) {
-        console.log(`成功从CSV文件提取到 ${cookies.length} 个cookies`);
-        return cookies;
-      } else {
-        console.warn(`未能从CSV文件提取到cookies (尝试 ${attempt}/${maxExtractAttempts})`);
+      // 读取文件内容
+      if (!fs.existsSync(csvFilePath)) {
+        console.error(`CSV文件不存在: ${csvFilePath}`);
+        return [];
       }
+      
+      // 读取文件内容并处理可能的换行符
+      let fileContent = fs.readFileSync(csvFilePath, 'utf8');
+      fileContent = fileContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      
+      // 首先尝试直接从文件内容中提取所有可能的cookie
+      const cookies = [];
+      
+      // 1. 检查是否有JWT格式的token (新格式)
+      const jwtRegex = /ey[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
+      const jwtMatches = fileContent.match(jwtRegex);
+      
+      if (jwtMatches && jwtMatches.length > 0) {
+        console.log(`直接从文件内容中提取到 ${jwtMatches.length} 个JWT token格式的Cookie`);
+        jwtMatches.forEach(match => {
+          if (!cookies.includes(match)) {
+            cookies.push(match);
+          }
+        });
+      }
+      
+      // 2. 检查是否有旧格式的cookie
+      if (fileContent.includes('user_')) {
+        console.log('文件包含旧格式cookie标识"user_"');
+        
+        // 使用旧的提取函数尝试提取
+        try {
+          const oldFormatCookies = await extractCookiesFromCsv(csvFilePath);
+          if (oldFormatCookies && oldFormatCookies.length > 0) {
+            console.log(`通过提取模块获取到 ${oldFormatCookies.length} 个cookie`);
+            oldFormatCookies.forEach(cookie => {
+              if (!cookies.includes(cookie)) {
+                cookies.push(cookie);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('通过提取模块获取cookie失败:', e.message);
+        }
+      }
+      
+      // 3. 如果找到了cookie，返回结果
+      if (cookies.length > 0) {
+        const newFormatCount = cookies.filter(c => c.startsWith('ey')).length;
+        const oldFormatCount = cookies.filter(c => c.includes('%3A%3A')).length;
+        
+        console.log(`总共找到 ${cookies.length} 个cookie`);
+        console.log(`新格式cookie(ey开头): ${newFormatCount}个`);
+        console.log(`旧格式cookie(包含%3A%3A): ${oldFormatCount}个`);
+        console.log(`其他格式cookie: ${cookies.length - newFormatCount - oldFormatCount}个`);
+        
+        return cookies;
+      }
+      
+      console.warn(`未能从文件中提取到任何cookie (尝试 ${attempt}/${maxExtractAttempts})`);
     } catch (error) {
       console.error(`从CSV文件提取cookies时出错 (尝试 ${attempt}/${maxExtractAttempts}):`, error);
     }
@@ -543,14 +594,24 @@ function addNewCookiesToSystem(apiKey, newCookies) {
     
     // 验证cookie是否完整
     const validatedCookies = newValidCookies.filter(cookie => {
-      // 检查cookie是否包含JWT的三个部分
-      if (cookie.includes('%3A%3A')) {
+      // 检查是否是新格式的JWT token (ey开头)
+      if (cookie.startsWith('ey') && cookie.includes('.')) {
+        const parts = cookie.split('.');
+        // 检查JWT是否包含三个部分
+        if (parts.length !== 3) {
+          console.warn(`跳过不完整的JWT cookie (新格式): ${cookie}`);
+          return false;
+        }
+        return true;
+      }
+      // 检查旧格式cookie是否包含JWT的三个部分
+      else if (cookie.includes('%3A%3A')) {
         const parts = cookie.split('%3A%3A');
         if (parts.length === 2) {
           const jwt = parts[1];
           // 检查JWT是否包含点（表示JWT的三个部分）
           if (!jwt.includes('.') || jwt.split('.').length !== 3) {
-            console.warn(`跳过不完整的cookie: ${cookie}`);
+            console.warn(`跳过不完整的cookie (旧格式): ${cookie}`);
             return false;
           }
         }
@@ -704,6 +765,12 @@ async function autoRefreshCookies(apiKey, minCookieCount = config.refresh.minCoo
       };
     }
     
+    // 分析提取到的cookie格式
+    const newFormatCookies = cookies.filter(cookie => cookie.startsWith('ey'));
+    const oldFormatCookies = cookies.filter(cookie => cookie.includes('%3A%3A'));
+    console.log(`提取到 ${newFormatCookies.length} 个新格式cookie(ey开头)`);
+    console.log(`提取到 ${oldFormatCookies.length} 个旧格式cookie(包含%3A%3A)`);
+    
     // 根据配置决定是否将现有cookie标记为无效
     const refreshMode = process.env.COOKIE_REFRESH_MODE || 'append';
     
@@ -723,7 +790,7 @@ async function autoRefreshCookies(apiKey, minCookieCount = config.refresh.minCoo
     
     return {
       success: true,
-      message: `成功添加 ${addedCount} 个新 Cookie`,
+      message: `成功添加 ${addedCount} 个新 Cookie (新格式: ${newFormatCookies.length}, 旧格式: ${oldFormatCookies.length})`,
       refreshed: addedCount
     };
   } catch (error) {
