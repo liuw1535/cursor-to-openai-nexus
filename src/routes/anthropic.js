@@ -32,7 +32,25 @@ function convertAnthropicToOpenAI(anthropicRequest) {
 
   // 添加其他消息
   if (messages && Array.isArray(messages)) {
-    openaiMessages = [...openaiMessages, ...messages];
+    // 将Anthropic消息格式转换为OpenAI格式
+    messages.forEach(msg => {
+      // 确保content是字符串
+      let content = '';
+      if (typeof msg.content === 'string') {
+        content = msg.content;
+      } else if (Array.isArray(msg.content)) {
+        // 如果content是数组，将文本内容连接起来
+        content = msg.content
+          .filter(item => item.type === 'text')
+          .map(item => item.text)
+          .join('');
+      }
+
+      openaiMessages.push({
+        role: msg.role,
+        content: content
+      });
+    });
   }
 
   // 构建OpenAI格式的请求
@@ -47,8 +65,6 @@ function convertAnthropicToOpenAI(anthropicRequest) {
   if (temperature !== undefined) openaiRequest.temperature = temperature;
   if (top_p !== undefined) openaiRequest.top_p = top_p;
   if (stop_sequences !== undefined) openaiRequest.stop = stop_sequences;
-
-  // top_k 在OpenAI中没有直接对应，忽略
 
   return openaiRequest;
 }
