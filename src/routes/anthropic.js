@@ -103,7 +103,7 @@ function convertOpenAIToAnthropic(openaiResponse) {
 router.post('/', async (req, res) => {
   try {
     // 获取认证信息
-    let bearerToken = req.headers.authorization?.replace('Bearer ', '');
+    let bearerToken = req.headers.authorization?.replace('Bearer ', '') || req.headers['x-api-key'];
     if (!bearerToken) {
       return res.status(401).json({
         error: {
