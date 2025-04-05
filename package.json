@@ -19,6 +19,7 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^2.7.0",
     "protobufjs": "^7.4.0",
+    "undici": "^6.21.2",
     "uuid": "11.0.5"
   },
   "scripts": {

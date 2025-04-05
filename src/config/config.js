@@ -21,6 +21,12 @@ module.exports = {
     apiKeys: apiKeysConfig,
     defaultRotationStrategy: process.env.ROTATION_STRATEGY || 'round-robin',
     
+    // 添加代理配置
+    proxy: {
+        enabled: process.env.PROXY_ENABLED === 'true' || false,
+        url: process.env.PROXY_URL || 'http://127.0.0.1:7890',
+    },
+    
     // GitHub相关配置
     github: {
         token: process.env.GITHUB_TOKEN,

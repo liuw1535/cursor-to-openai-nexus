@@ -4,44 +4,83 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const $root = require('../proto/message.js');
 
-const regex = /<\|BEGIN_SYSTEM\|>.*?<\|END_SYSTEM\|>.*?<\|BEGIN_USER\|>.*?<\|END_USER\|>/s;
-
 function generateCursorBody(messages, modelName) {
 
-  const systemMessages = messages
-    .filter((msg) => msg.role === 'system');
-  const instruction = systemMessages.map((msg) => msg.content).join('\n')
+  const instruction = messages
+    .filter(msg => msg.role === 'system')
+    .map(msg => msg.content)
+    .join('\n')
 
-  const nonSystemMessages = messages
-    .filter((msg) => msg.role !== 'system');
-  const formattedMessages = nonSystemMessages.map((msg) => ({
-    ...msg,
-    role: msg.role === 'user' ? 1 : 2,
-    messageId: uuidv4()
-  }));
+  const formattedMessages = messages
+    .filter(msg => msg.role !== 'system')
+    .map(msg => ({
+      content: msg.content,
+      role: msg.role === 'user' ? 1 : 2,
+      messageId: uuidv4(),
+      ...(msg.role === 'user' ? { chatModeEnum: 1 } : {})
+      //...(msg.role !== 'user' ? { summaryId: uuidv4() } : {})
+    }));
 
-  const chatBody = {
-    userMessages: formattedMessages,
-    instructions: {
-      instruction: "Alway respond in 中文.\n" + instruction
-    },
-    model: {
-      name: modelName,
-      empty: '',
-    },
-    unknown13: 1,
-    conversationId: uuidv4(),
-    unknown16: 1,
-    unknown29: 1,
-    unknown31: 0,
+  const messageIds = formattedMessages.map(msg => {
+    const { role, messageId, summaryId } = msg;
+    return summaryId ? { role, messageId, summaryId } : { role, messageId };
+  });
+
+  const body = {
+    request:{
+      messages: formattedMessages,
+      unknown2: 1,
+      instruction: {
+        instruction: instruction
+      },
+      unknown4: 1,
+      model: {
+        name: modelName,
+        empty: '',
+      },
+      webTool: "",
+      unknown13: 1,
+      cursorSetting: {
+        name: "cursor\\aisettings",
+        unknown3: "",
+        unknown6: {
+          unknwon1: "",
+          unknown2: ""
+        },
+        unknown8: 1,
+        unknown9: 1
+      },
+      unknown19: 1,
+      //unknown22: 1,
+      conversationId: uuidv4(),
+      metadata: {
+        os: "win32",
+        arch: "x64",
+        version: "10.0.22631",
+        path: "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+        timestamp: new Date().toISOString(),
+      },
+      unknown27: 0,
+      //unknown29: "",
+      messageIds: messageIds,
+      largeContext: 0,
+      unknown38: 0,
+      chatModeEnum: 1,
+      unknown47: "",
+      unknown48: 0,
+      unknown49: 0,
+      unknown51: 0,
+      unknown53: 1,
+      chatMode: "Ask"
+    }
   };
 
-  const errMsg = $root.ChatMessage.verify(chatBody);
+  const errMsg = $root.StreamUnifiedChatWithToolsRequest.verify(body);
   if (errMsg) throw Error(errMsg);
-  const chatMessageInstance = $root.ChatMessage.create(chatBody);
-  let buffer = $root.ChatMessage.encode(chatMessageInstance).finish();
+  const instance = $root.StreamUnifiedChatWithToolsRequest.create(body);
+  let buffer = $root.StreamUnifiedChatWithToolsRequest.encode(instance).finish();
   let magicNumber = 0x00
-  if (formattedMessages.length >= 5){
+  if (formattedMessages.length >= 3){
     buffer = zlib.gzipSync(buffer)
     magicNumber = 0x01
   }
@@ -58,99 +97,66 @@ function generateCursorBody(messages, modelName) {
 function chunkToUtf8String(chunk) {
   const results = []
   const errorResults = { hasError: false, errorMessage: '' }
-  
+  const buffer = Buffer.from(chunk, 'hex');
+  //console.log("Chunk buffer:", buffer.toString('hex'))
+
   try {
-    if (!chunk || chunk.length === 0) {
-      console.error('收到空的chunk数据');
-      return '';
-    }
-    
-    const buffer = Buffer.from(chunk, 'hex');
-
     for(let i = 0; i < buffer.length; i++){
-      try {
-        if (i + 5 >= buffer.length) {
-          console.error('数据不足以读取魔数和长度');
-          break;
-        }
-        
-        const magicNumber = parseInt(buffer.subarray(i, i + 1).toString('hex'), 16)
-        const dataLength = parseInt(buffer.subarray(i + 1, i + 5).toString('hex'), 16)
-        
-        if (dataLength <= 0 || dataLength > 1000000) {
-          console.error(`数据长度异常: ${dataLength}`);
-          break;
-        }
-        
-        if (i + 5 + dataLength > buffer.length) {
-          console.error('数据不足以读取内容');
-          break;
-        }
-        
-        const data = buffer.subarray(i + 5, i + 5 + dataLength)
+      const magicNumber = parseInt(buffer.subarray(i, i + 1).toString('hex'), 16)
+      const dataLength = parseInt(buffer.subarray(i + 1, i + 5).toString('hex'), 16)
+      const data = buffer.subarray(i + 5, i + 5 + dataLength)
+      //console.log("Parsed buffer:", magicNumber, dataLength, data.toString('hex'))
 
-        // 处理不同类型的消息
-        const processMessage = async (data, isGzip = false) => {
-          try {
-            let processedData = data;
-            if (isGzip) {
-              processedData = zlib.gunzipSync(data);
-            }
-
-            if (magicNumber === 0 || magicNumber === 1) {
-              // 处理 Proto 消息
-              const resMessage = $root.ResMessage.decode(processedData);
-              if (resMessage.content !== undefined) {
-                results.push(resMessage.content);
-              }
-            } else if (magicNumber === 2 || magicNumber === 3) {
-              // 处理 JSON 消息
-              const utf8 = processedData.toString('utf-8');
-              const message = JSON.parse(utf8);
-              
-              if (message && message.error) {
-                console.error(`检测到JSON错误对象(${isGzip ? 'Gzip ' : ''}):`, utf8);
-                errorResults.hasError = true;
-                errorResults.errorMessage = utf8;
-              }
-            } else {
-              console.log('未知的魔数:', magicNumber);
-            }
-          } catch (error) {
-            console.error(`处理${isGzip ? 'Gzip ' : ''}消息错误:`, error);
-          }
-        };
-
-        // 根据魔数处理不同类型的消息
-        if (magicNumber === 0 || magicNumber === 2) {
-          processMessage(data, false);
-        } else if (magicNumber === 1 || magicNumber === 3) {
-          processMessage(data, true);
+      if (magicNumber == 0 || magicNumber == 1) {
+        const gunzipData = magicNumber == 0 ? data : zlib.gunzipSync(data)
+        const response = $root.StreamUnifiedChatWithToolsResponse.decode(gunzipData);
+        const thinking = response?.message?.thinking?.content
+        if (thinking !== undefined){
+            results.push(thinking);
+            //console.log(thinking);
         }
 
-        i += 5 + dataLength - 1;
-      } catch (chunkParseError) {
-        console.error('解析单个chunk部分错误:', chunkParseError);
-        i += 1;
+        const content = response?.message?.content
+        if (content !== undefined){
+          results.push(content)
+          //console.log(content)
+        }
+        
       }
+      else if (magicNumber == 2 || magicNumber == 3) { 
+        // Json message
+        const gunzipData = magicNumber == 2 ? data : zlib.gunzipSync(data)
+        const utf8 = gunzipData.toString('utf-8')
+        const message = JSON.parse(utf8)
+
+        if (message != null && (typeof message !== 'object' || 
+          (Array.isArray(message) ? message.length > 0 : Object.keys(message).length > 0))){
+            //results.push(utf8)
+            console.error(utf8)
+            
+            // 检查是否为错误消息
+            if (message && message.error) {
+              errorResults.hasError = true;
+              errorResults.errorMessage = utf8;
+            }
+        }
+      }
+      else {
+        //console.log('Unknown magic number when parsing chunk response: ' + magicNumber)
+      }
+
+      i += 5 + dataLength - 1
     }
   } catch (err) {
-    console.error('解析chunk整体错误:', err);
+    console.log('Error parsing chunk response:', err)
   }
 
+  // 如果存在错误，返回错误对象
   if (errorResults.hasError) {
     return { error: errorResults.errorMessage };
   }
 
-  return results.join('');
-}
-
-function generateUUIDHash(input, salt = '') {
-  const hash = crypto.createHash('sha256').update(input + salt).digest('hex');
-  const hash128 = hash.substring(0, 32);
-  const uuid = `${hash128.substring(0, 8)}-${hash128.substring(8, 12)}-${hash128.substring(12, 16)}-${hash128.substring(16, 20)}-${hash128.substring(20, 32)}`;
-
-  return uuid;
+  return results.join('')
 }
 
 function generateHashed64Hex(input, salt = '') {
@@ -169,11 +175,9 @@ function obfuscateBytes(byteArray) {
 }
 
 function generateCursorChecksum(token) {
-  // 生成machineId和macMachineId
   const machineId = generateHashed64Hex(token, 'machineId');
   const macMachineId = generateHashed64Hex(token, 'macMachineId');
 
-  // 获取时间戳并转换为字节数组
   const timestamp = Math.floor(Date.now() / 1e6);
   const byteArray = new Uint8Array([
     (timestamp >> 40) & 255,
@@ -184,11 +188,9 @@ function generateCursorChecksum(token) {
     255 & timestamp,
   ]);
 
-  // 混淆字节数组并进行base64编码
   const obfuscatedBytes = obfuscateBytes(byteArray);
   const encodedChecksum = Buffer.from(obfuscatedBytes).toString('base64');
 
-  // 组合最终的checksum
   return `${encodedChecksum}${machineId}/${macMachineId}`;
 }
 
