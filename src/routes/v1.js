@@ -285,15 +285,18 @@ router.get("/models", async (req, res) => {
     const availableModelsResponse = await fetch("https://api2.cursor.sh/aiserver.v1.AiService/AvailableModels", {
       method: 'POST',
       headers: {
-        'accept-encoding': 'gzip',
+        'accept-encoding': 'gzip, deflate, br, zstd',
+        'accept-language': 'zh-CN',
         'authorization': `Bearer ${authToken}`,
+        'origin': 'vscode-file://vscode-app',
         'connect-protocol-version': '1',
         'content-type': 'application/proto',
         'user-agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/${cursorClientVersion} Chrome/132.0.6834.210 Electron/34.3.4 Safari/537.36`,
-        'x-cursor-checksum': checksum,
-        'x-cursor-client-version': cursorClientVersion,
-        'x-cursor-timezone': 'Asia/Shanghai',
+        // 'x-cursor-checksum': checksum,
+        // 'x-cursor-client-version': cursorClientVersion,
+        // 'x-cursor-timezone': 'Asia/Shanghai',
         'x-ghost-mode': 'true',
+        'x-new-onboarding-completed:': 'false',
         'Host': 'api2.cursor.sh',
       },
     })
