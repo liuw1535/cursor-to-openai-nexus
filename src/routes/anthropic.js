@@ -169,6 +169,7 @@ router.post('/', async (req, res) => {
         'authorization': `Bearer ${authToken}`,
         'connect-protocol-version': '1',
         'content-type': 'application/proto',
+        'origin': 'vscode-file://vscode-app',
         'user-agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/${cursorClientVersion} Chrome/132.0.6834.210 Electron/34.3.4 Safari/537.36`,
         'x-amzn-trace-id': `Root=${uuidv4()}`,
         'x-client-key': clientKey,
