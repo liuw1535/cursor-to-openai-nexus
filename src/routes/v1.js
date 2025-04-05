@@ -280,7 +280,7 @@ router.get("/models", async (req, res) => {
       ?? process.env['x-cursor-checksum'] 
       ?? generateCursorChecksum(authToken.trim());
     //const cursorClientVersion = "0.45.11"
-    const cursorClientVersion = "0.48.6";
+    const cursorClientVersion = "0.48.7";
 
     const availableModelsResponse = await fetch("https://api2.cursor.sh/aiserver.v1.AiService/AvailableModels", {
       method: 'POST',
@@ -289,7 +289,7 @@ router.get("/models", async (req, res) => {
         'authorization': `Bearer ${authToken}`,
         'connect-protocol-version': '1',
         'content-type': 'application/proto',
-        'user-agent': 'connect-es/1.6.1',
+        'user-agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/${cursorClientVersion} Chrome/132.0.6834.210 Electron/34.3.4 Safari/537.36`,
         'x-cursor-checksum': checksum,
         'x-cursor-client-version': cursorClientVersion,
         'x-cursor-timezone': 'Asia/Shanghai',

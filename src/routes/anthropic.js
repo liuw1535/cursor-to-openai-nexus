@@ -157,7 +157,7 @@ router.post('/', async (req, res) => {
     const checksum = req.headers['x-cursor-checksum']
       ?? process.env['x-cursor-checksum']
       ?? generateCursorChecksum(authToken.trim());
-    const cursorClientVersion = "0.45.11";
+    const cursorClientVersion = "0.48.7";
     const clientKey = uuidv4();
     const sessionid = uuidv4();
 
@@ -169,7 +169,7 @@ router.post('/', async (req, res) => {
         'authorization': `Bearer ${authToken}`,
         'connect-protocol-version': '1',
         'content-type': 'application/proto',
-        'user-agent': 'connect-es/1.6.1',
+        'user-agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/${cursorClientVersion} Chrome/132.0.6834.210 Electron/34.3.4 Safari/537.36`,
         'x-amzn-trace-id': `Root=${uuidv4()}`,
         'x-client-key': clientKey,
         'x-cursor-checksum': checksum,
