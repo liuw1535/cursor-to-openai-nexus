@@ -156,7 +156,7 @@ router.post('/', async (req, res) => {
     // 准备Cursor请求所需的参数
     const checksum = req.headers['x-cursor-checksum']
       ?? process.env['x-cursor-checksum']
-      ?? generateCursorChecksum(authToken.trim());
+      ?? (authToken ? generateCursorChecksum(authToken.trim()) : '');
     const cursorClientVersion = "0.48.7";
     const clientKey = uuidv4();
     const sessionid = uuidv4();
