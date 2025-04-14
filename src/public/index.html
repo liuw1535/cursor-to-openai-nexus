@@ -266,6 +266,42 @@
         </div>
     </div>
 
+    <!-- 新增：获取Cursor Cookie功能 -->
+    <div class="card">
+        <h2>获取Cursor Cookie</h2>
+        <div class="form-group">
+            <div class="info">
+                通过此功能可以快速获取新的Cursor Cookie并添加到系统中。点击按钮生成链接，完成登录后自动添加Cookie。
+            </div>
+            <div id="getCookieMessage"></div>
+            <div style="margin-top: 15px;">
+                <div class="form-group">
+                    <label for="targetApiKey">选择要添加Cookie的API Key（不选则添加到所有）</label>
+                    <select id="targetApiKey" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
+                        <option value="">所有API Key</option>
+                        <!-- 选项将通过JavaScript动态加载 -->
+                    </select>
+                </div>
+                <button id="generateLinkBtn" style="background: #2980b9;">生成登录链接</button>
+            </div>
+            <div id="loginLinkContainer" style="margin-top: 15px; display: none;">
+                <div class="info">
+                    <p>请点击下面的链接或复制到浏览器打开，然后登录Cursor账号并授权：</p>
+                    <div style="margin: 10px 0; word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                        <a id="loginLink" href="#" target="_blank"></a>
+                    </div>
+                    <p>登录完成后系统将自动获取Cookie并添加到API Key中。</p>
+                </div>
+                <div id="pollStatus" style="margin-top: 10px;">
+                    <div>状态：<span id="pollStatusText">等待用户登录...</span></div>
+                    <div style="margin-top: 10px;">
+                        <progress id="pollProgress" value="0" max="100" style="width: 100%;"></progress>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 获取模态框元素
         const modal = document.getElementById('editModal');
@@ -686,6 +722,7 @@
             loadApiKeys();
             renderInvalidCookies();
             populateRefreshApiKeySelect();
+            populateCookieApiKeySelect();
         });
 
         // 显示消息的通用函数
@@ -911,11 +948,163 @@
             // 只对管理页面的API请求添加token
             if (url.includes('/v1/api-keys') || 
                 url.includes('/v1/invalid-cookies') || 
-                url.includes('/v1/refresh-cookies')) {
+                url.includes('/v1/refresh-cookies') ||
+                url.includes('/v1/generate-cookie-link') ||
+                url.includes('/v1/check-cookie-status')) {
                 options.headers = addAuthHeader(options.headers);
             }
             return originalFetch(url, options);
         };
+
+        // 为Cookie获取功能填充API Key下拉框
+        function populateCookieApiKeySelect() {
+            populateRefreshApiKeySelect().then(() => {
+                // 复制refreshApiKey的选项到targetApiKey
+                const sourceSelect = document.getElementById('refreshApiKey');
+                const targetSelect = document.getElementById('targetApiKey');
+                
+                // 保留第一个选项（"所有API Key"）
+                while (targetSelect.options.length > 1) {
+                    targetSelect.remove(1);
+                }
+                
+                // 复制选项
+                for (let i = 1; i < sourceSelect.options.length; i++) {
+                    const option = document.createElement('option');
+                    option.value = sourceSelect.options[i].value;
+                    option.textContent = sourceSelect.options[i].textContent;
+                    targetSelect.appendChild(option);
+                }
+            });
+        }
+
+        // 生成登录链接
+        document.getElementById('generateLinkBtn').addEventListener('click', async function() {
+            const messageContainer = document.getElementById('getCookieMessage');
+            const linkContainer = document.getElementById('loginLinkContainer');
+            const loginLink = document.getElementById('loginLink');
+            const pollStatusText = document.getElementById('pollStatusText');
+            const pollProgress = document.getElementById('pollProgress');
+            const targetApiKey = document.getElementById('targetApiKey').value;
+
+            try {
+                // 显示加载状态
+                messageContainer.innerHTML = '<div class="info">正在生成登录链接...</div>';
+                
+                // 请求生成登录链接
+                const response = await fetch('/v1/generate-cookie-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    },
+                    body: JSON.stringify({ apiKey: targetApiKey })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || '生成链接失败');
+                }
+                
+                // 显示链接
+                loginLink.href = data.url;
+                loginLink.textContent = data.url;
+                linkContainer.style.display = 'block';
+                
+                // 更新状态
+                pollStatusText.textContent = '等待用户登录...';
+                pollProgress.value = 10;
+                
+                // 开始轮询获取cookie状态
+                messageContainer.innerHTML = '<div class="info">链接已生成，请点击链接登录Cursor账号并授权</div>';
+                
+                // 开始轮询cookie状态
+                pollForCookieStatus(data.uuid);
+                
+            } catch (error) {
+                console.error('生成登录链接失败:', error);
+                messageContainer.innerHTML = `<div class="error">生成链接失败: ${error.message}</div>`;
+            }
+        });
+
+        // 轮询Cookie获取状态
+        function pollForCookieStatus(uuid) {
+            const messageContainer = document.getElementById('getCookieMessage');
+            const pollStatusText = document.getElementById('pollStatusText');
+            const pollProgress = document.getElementById('pollProgress');
+            const maxAttempts = 120; // 最多尝试120次，相当于2分钟
+            let attempt = 0;
+            
+            // 更新状态显示
+            pollStatusText.textContent = '等待用户登录...';
+            
+            const interval = setInterval(function() {
+                attempt++;
+                
+                try {
+                    // 更新进度条（保持在10%-90%之间，表示等待中）
+                    pollProgress.value = 10 + Math.min(80, attempt) * 0.8;
+                    
+                    // 请求检查状态
+                    fetch(`/v1/check-cookie-status?uuid=${encodeURIComponent(uuid)}`, {
+                        method: 'GET',
+                        headers: {
+                            'Cache-Control': 'no-cache'
+                        }
+                    }).then(function(response) {
+                        if (!response.ok) {
+                            pollStatusText.textContent = `请求失败: ${response.status}`;
+                            return;
+                        }
+                        
+                        return response.json();
+                    }).then(function(data) {
+                        if (data.success) {
+                            // Cookie获取成功
+                            clearInterval(interval);
+                            pollProgress.value = 100;
+                            pollStatusText.textContent = '获取Cookie成功！';
+                            messageContainer.innerHTML = `<div class="info">成功获取并添加Cookie！${data.message || ''}</div>`;
+                            
+                            // 刷新API Keys列表
+                            loadApiKeys();
+                            populateCookieApiKeySelect();
+                            
+                        } else if (data.status === 'waiting') {
+                            // 继续等待
+                            pollStatusText.textContent = '等待用户登录...';
+                        } else if (data.status === 'failed') {
+                            // 获取失败
+                            clearInterval(interval);
+                            pollStatusText.textContent = '获取失败';
+                            pollProgress.value = 0;
+                            messageContainer.innerHTML = `<div class="error">获取Cookie失败: ${data.message || '未知错误'}</div>`;
+                        }
+                    }).catch(function(error) {
+                        console.error('轮询Cookie状态失败:', error);
+                        pollStatusText.textContent = `轮询出错: ${error.message}`;
+                    });
+                    
+                } catch (error) {
+                    console.error('轮询Cookie状态出错:', error);
+                    pollStatusText.textContent = `轮询出错: ${error.message}`;
+                }
+                
+                // 达到最大尝试次数后停止
+                if (attempt >= maxAttempts) {
+                    clearInterval(interval);
+                    pollStatusText.textContent = '超时，请重试';
+                    pollProgress.value = 0;
+                    messageContainer.innerHTML = '<div class="error">获取Cookie超时，请重新尝试</div>';
+                }
+                
+            }, 1000); // 每秒轮询一次
+        }
     </script>
 </body>
 </html> 

@@ -10,6 +10,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const admin = require('../models/admin');
 const config = require('../config/config');
+const crypto = require('crypto');
 
 // 存储刷新状态的变量
 let refreshStatus = {
@@ -20,6 +21,9 @@ let refreshStatus = {
   endTime: null,
   error: null
 };
+
+// 储存当前正在处理的Cookie获取请求
+const pendingCookieRequests = new Map();
 
 // 检查是否已有管理员账号
 router.get('/admin/check', (req, res) => {
@@ -892,6 +896,186 @@ router.get("/refresh-status", (req, res) => {
     return res.status(500).json({
       success: false,
       message: `获取刷新状态失败: ${error.message}`
+    });
+  }
+});
+
+// 生成获取Cookie的链接
+router.post('/generate-cookie-link', async (req, res) => {
+  try {
+    // 验证管理员权限
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: '未提供认证token'
+      });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    const authResult = admin.verifyToken(token);
+    
+    if (!authResult.success) {
+      return res.status(401).json({
+        success: false,
+        message: '认证失败'
+      });
+    }
+    
+    // 生成UUID和PKCE验证器
+    const uuid = uuidv4();
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+
+    // 生成登录链接
+    const loginUrl = `https://www.cursor.com/cn/loginDeepControl?challenge=${challenge}&uuid=${uuid}&mode=login`;
+    
+    // 记录请求信息
+    pendingCookieRequests.set(uuid, {
+      uuid,
+      verifier,
+      status: 'waiting',
+      created: Date.now(),
+      apiKey: req.body.apiKey || '', // 目标API Key，空字符串表示所有API Key
+      lastCheck: Date.now(),
+      cookie: null
+    });
+    
+    // 设置60分钟后自动清理
+    setTimeout(() => {
+      if (pendingCookieRequests.has(uuid)) {
+        pendingCookieRequests.delete(uuid);
+      }
+    }, 60 * 60 * 1000);
+    
+    return res.json({
+      success: true,
+      url: loginUrl,
+      uuid: uuid
+    });
+  } catch (error) {
+    console.error('生成Cookie链接失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// 查询Cookie获取状态
+router.get('/check-cookie-status', async (req, res) => {
+  try {
+    const { uuid } = req.query;
+    
+    if (!uuid || !pendingCookieRequests.has(uuid)) {
+      return res.json({
+        success: false,
+        status: 'failed',
+        message: '无效的UUID或请求已过期'
+      });
+    }
+    
+    const request = pendingCookieRequests.get(uuid);
+    request.lastCheck = Date.now();
+    
+    // 检查状态
+    if (request.status === 'waiting') {
+      // 检查Cursor API获取token
+      try {
+        const apiUrl = `https://api2.cursor.sh/auth/poll?uuid=${uuid}&verifier=${request.verifier}`;
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.210 Safari/537.36',
+            'Accept': '*/*',
+            'Origin': 'vscode-file://vscode-app',
+            'x-ghost-mode': 'true'
+          },
+          timeout: 5000
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data && data.accessToken) {
+            // 获取到了Cookie
+            request.cookie = data.accessToken;
+            request.status = 'success';
+            
+            // 将Cookie添加到目标API Key
+            let message = '';
+            
+            if (request.apiKey) {
+              // 添加到特定API Key
+              const apiKey = request.apiKey;
+              const cookies = keyManager.getAllCookiesForApiKey(apiKey) || [];
+              cookies.push(request.cookie);
+              keyManager.addOrUpdateApiKey(apiKey, cookies);
+              message = `Cookie已添加到API Key: ${apiKey}`;
+            } else {
+              // 添加到所有API Key
+              const apiKeys = keyManager.getAllApiKeys();
+              for (const apiKey of apiKeys) {
+                const cookies = keyManager.getAllCookiesForApiKey(apiKey) || [];
+                cookies.push(request.cookie);
+                keyManager.addOrUpdateApiKey(apiKey, cookies);
+              }
+              message = `Cookie已添加到所有API Key，共${apiKeys.length}个`;
+            }
+            
+            // 完成后从等待列表中移除
+            pendingCookieRequests.delete(uuid);
+            
+            return res.json({
+              success: true,
+              message: message
+            });
+          }
+        }
+        
+        // 如果没有获取到Cookie，继续等待
+        return res.json({
+          success: false,
+          status: 'waiting'
+        });
+        
+      } catch (error) {
+        console.error('查询Cursor API失败:', error);
+        // 发生错误但继续等待，不改变状态
+        return res.json({
+          success: false,
+          status: 'waiting',
+          message: '轮询过程中出现错误，继续等待'
+        });
+      }
+    } else if (request.status === 'success') {
+      // 已成功，返回结果
+      const message = request.apiKey 
+        ? `Cookie已添加到API Key: ${request.apiKey}`
+        : `Cookie已添加到所有API Key`;
+      
+      // 完成后从等待列表中移除
+      pendingCookieRequests.delete(uuid);
+      
+      return res.json({
+        success: true,
+        message: message
+      });
+    } else {
+      // 失败
+      pendingCookieRequests.delete(uuid);
+      return res.json({
+        success: false,
+        status: 'failed',
+        message: '获取Cookie失败'
+      });
+    }
+  } catch (error) {
+    console.error('检查Cookie状态失败:', error);
+    return res.status(500).json({
+      success: false,
+      status: 'failed',
+      message: error.message
     });
   }
 });
