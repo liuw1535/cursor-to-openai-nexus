@@ -1,0 +1,591 @@
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 10px;
+    color: #333;
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #f5f8fa;
+}
+@media screen and (max-width: 768px) {
+    body {
+        padding: 8px;
+    }
+}
+h1, h2 {
+    color: #2c3e50;
+    margin-top: 0;
+}
+@media screen and (max-width: 768px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+    h2 {
+        font-size: 1.3rem;
+    }
+}
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 24px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+@media screen and (max-width: 768px) {
+    .card {
+        padding: 16px;
+        margin-bottom: 10px;
+    }
+}
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+@media (hover: none) {
+    .card:hover {
+        /* 移动设备上禁用悬停效果 */
+        transform: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+}
+.form-group {
+    margin-bottom: 15px;
+}
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #34495e;
+}
+input, textarea, select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border 0.3s;
+    box-sizing: border-box;
+}
+@media screen and (max-width: 768px) {
+    input, textarea, select {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+}
+input:focus, textarea:focus, select:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+textarea {
+    min-height: 100px;
+    font-family: monospace;
+}
+button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s;
+    font-weight: bold;
+    -webkit-tap-highlight-color: transparent;
+}
+@media screen and (max-width: 768px) {
+    button {
+        padding: 10px 14px;
+        font-size: 14px;
+        width: 100%;  /* 移动端按钮全宽 */
+        margin-bottom: 8px;
+    }
+}
+button:hover {
+    background: #2980b9;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    padding: 14px;
+    text-align: left;
+    border-bottom: 1px solid #ecf0f1;
+}
+@media screen and (max-width: 768px) {
+    th, td {
+        padding: 8px 4px;
+        font-size: 14px;
+    }
+    /* 在小屏幕上重新排列表格 */
+    table, thead, tbody, th, td, tr {
+        display: block;
+    }
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    tr {
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50%;
+        white-space: normal;
+        text-align: left;
+    }
+    td:before {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+        content: attr(data-title);
+    }
+    /* 设置每个单元格的标题 */
+    #keyTable td:nth-of-type(1):before { content: "API Key"; }
+    #keyTable td:nth-of-type(2):before { content: "Cookie 数量"; }
+    #keyTable td:nth-of-type(3):before { content: "操作"; }
+}
+th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #34495e;
+}
+tr:hover {
+    background-color: #f8f9fa;
+}
+.action-btn {
+    background: #e74c3c;
+    margin-right: 5px;
+}
+.action-btn:hover {
+    background: #c0392b;
+}
+.edit-btn {
+    background: #f39c12;
+    margin-right: 5px;
+}
+.edit-btn:hover {
+    background: #d35400;
+}
+@media screen and (max-width: 768px) {
+    .action-btn, .edit-btn {
+        margin-right: 0;
+        margin-bottom: 5px;
+        width: 100%;
+        max-width: 100px;
+    }
+}
+.info {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid #28a745;
+}
+@media screen and (max-width: 768px) {
+    .info {
+        padding: 8px;
+        font-size: 14px;
+    }
+}
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid #dc3545;
+}
+@media screen and (max-width: 768px) {
+    .error {
+        padding: 8px;
+        font-size: 14px;
+    }
+}
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 30px;
+    border: none;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    animation: modalFadeIn 0.3s;
+}
+@media screen and (max-width: 768px) {
+    .modal-content {
+        width: 90%;
+        padding: 15px;
+        margin: 5% auto;
+    }
+}
+@keyframes modalFadeIn {
+    from {opacity: 0; transform: translateY(-20px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+@media screen and (max-width: 768px) {
+    .close {
+        font-size: 24px;
+        padding: 5px;  /* 增大点击区域 */
+    }
+}
+.close:hover,
+.close:focus {
+    color: #2c3e50;
+    text-decoration: none;
+}
+/* 无效Cookie样式 */
+.cookie-text {
+    max-width: 80%;
+    word-break: break-all;
+}
+@media screen and (max-width: 768px) {
+    .cookie-text {
+        max-width: 100%;
+        font-size: 14px;
+    }
+}
+/* Cookie标签样式统一处理 */
+.cookie-tag {
+    background: #f1f3f5;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 5px;
+    display: inline-flex;
+    font-family: monospace;
+    border: 1px solid #ddd;
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 30px);
+    align-items: center;
+    box-sizing: border-box;
+}
+
+/* 删除按钮统一样式 */
+.delete-cookie, .delete-add-cookie {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    max-width: 20px;
+    max-height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: 6px;
+    font-weight: bold;
+    font-size: 12px;
+    vertical-align: middle;
+    padding: 0;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+@media screen and (max-width: 768px) {
+    .cookie-tag {
+        padding: 6px 8px;
+        padding-right: 4px;
+        font-size: 13px;
+        max-width: 100%;
+        box-sizing: border-box;
+        display: inline-flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 6px;
+        margin: 5px 0;
+        min-width: 50px;
+        gap: 4px;
+    }
+    
+    .delete-cookie, .delete-add-cookie {
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        min-height: 20px;
+        max-width: 20px;
+        max-height: 20px;
+        line-height: 1;
+        font-size: 14px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 4px;
+        touch-action: manipulation;
+    }
+}
+
+/* Cookie文本内容的样式 */
+.cookie-text-content {
+    display: inline-block;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 10px;
+}
+.cookies-container {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px;
+    min-height: 100px;
+    margin-bottom: 10px;
+}
+@media screen and (max-width: 768px) {
+    .cookies-container {
+        padding: 8px;
+        min-height: 80px;
+    }
+}
+.add-cookie-btn {
+    background: #27ae60;
+    margin-top: 10px;
+}
+.add-cookie-btn:hover {
+    background: #219653;
+}
+progress {
+    height: 15px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+progress::-webkit-progress-bar {
+    background-color: #f0f0f0;
+    border-radius: 10px;
+}
+progress::-webkit-progress-value {
+    background-color: #3498db;
+    border-radius: 10px;
+}
+/* 页头样式 */
+.header-card {
+    background: linear-gradient(135deg, #3498db, #2c3e50);
+    color: white;
+}
+.header-card h1, .header-card p {
+    color: white;
+}
+/* 添加移动设备的输入框组样式 */
+@media screen and (max-width: 768px) {
+    div[style*="display: flex; gap: 10px;"] {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    #addNewCookie, #newCookie {
+        margin-bottom: 5px;
+    }
+}
+
+/* 移动设备操作按钮适配 */
+@media screen and (max-width: 768px) {
+    .header-card div[style*="display: flex; justify-content: space-between;"] {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-card div[style*="display: flex; justify-content: space-between;"] div {
+        margin-bottom: 10px;
+        width: 100%;
+    }
+    
+    .header-card div[style*="display: flex; justify-content: space-between;"] button {
+        margin-bottom: 5px;
+        width: 100%;
+    }
+    
+    #adminUsername {
+        display: block;
+        margin-bottom: 5px;
+    }
+}
+/* 移动设备表单元素增强 */
+@media screen and (max-width: 768px) {
+    /* 优化输入框高度，更适合触屏操作 */
+    input, select, textarea, button {
+        height: 44px;
+    }
+    
+    textarea {
+        min-height: 80px;
+        height: auto;
+    }
+    
+    /* 修复表单内输入框和按钮的布局 */
+    .form-input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .form-input-group input {
+        margin-bottom: 8px;
+    }
+    
+    /* 确保按钮有足够的点击区域 */
+    button {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+    
+    /* 修复模态框中的按钮样式 */
+    .modal-content button {
+        width: 100%;
+        margin-top: 10px;
+    }
+}
+
+/* 增加页面滚动时的平滑效果 */
+html {
+    scroll-behavior: smooth;
+}
+
+/* 优化固定在底部的操作按钮 */
+.sticky-actions {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 10px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    margin: 0 -24px -24px -24px;
+    border-radius: 0 0 10px 10px;
+}
+
+@media screen and (max-width: 768px) {
+    .sticky-actions {
+        margin: 0 -16px -16px -16px;
+        padding: 8px;
+    }
+}
+
+/* 确保在模态框中的按钮显示正常 */
+.modal .cookie-tag {
+    margin: 5px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.modal .delete-cookie {
+    border-radius: 50%;
+    margin-left: 6px;
+}
+
+@media screen and (max-width: 768px) {
+    .modal .cookie-tag {
+        display: flex;
+        width: 100%;
+        margin: 5px 0;
+    }
+    
+    .modal .cookie-text-content {
+        max-width: calc(100% - 30px);
+        text-align: left;
+    }
+    
+    /* 在模态框中给按钮增加额外的点击区域 */
+    .modal .delete-cookie {
+        margin: 0 2px;
+        margin-left: auto;
+    }
+}
+
+/* 防止短Cookie显示异常 */
+.cookie-tag.short-cookie {
+    min-width: 80px;
+}
+
+/* 复制Cookie按钮样式 */
+.copy-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: 6px;
+    font-weight: bold;
+    font-size: 12px;
+    padding: 0;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    transition: background 0.2s;
+}
+
+.copy-btn:hover {
+    background: #2980b9;
+}
+
+/* Cookie标签内的按钮组 */
+.cookie-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+}
+
+@media screen and (max-width: 768px) {
+    .copy-btn {
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        min-height: 22px;
+        max-width: 22px;
+        max-height: 22px;
+        font-size: 11px;
+    }
+} 

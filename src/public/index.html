@@ -2,158 +2,25 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cursor To OpenAI - API Key 管理</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        h1, h2 {
-            color: #2c3e50;
-        }
-        .container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .card {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input, textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        textarea {
-            min-height: 100px;
-            font-family: monospace;
-        }
-        button {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background: #2980b9;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .action-btn {
-            background: #e74c3c;
-            margin-right: 5px;
-        }
-        .action-btn:hover {
-            background: #c0392b;
-        }
-        .edit-btn {
-            background: #f39c12;
-            margin-right: 5px;
-        }
-        .edit-btn:hover {
-            background: #d35400;
-        }
-        .info {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-        .error {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 600px;
-            border-radius: 8px;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-        }
-        /* 无效Cookie样式 */
-        .cookie-text {
-            max-width: 80%;
-            word-break: break-all;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <div class="card">
+        <div class="card header-card">
             <h1>Cursor To OpenAI - API Key 管理</h1>
             <p>在此页面上，您可以管理自定义 API Key 与 Cursor Cookie 的映射关系。</p>
-            <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                 <div>
-                <button id="testApiBtn" style="margin-right: 10px;">测试API连接</button>
-                <button id="clearCacheBtn">清除缓存并刷新</button>
+                <button id="clearCacheBtn" style="background-color: rgba(255,255,255,0.2);">清除缓存并刷新</button>
                 </div>
                 <div>
-                    <span id="adminUsername" style="margin-right: 10px;"></span>
-                    <button id="logoutBtn" style="background: #e74c3c;">退出登录</button>
+                    <span id="adminUsername" style="margin-right: 10px; color: white;"></span>
+                    <button id="logoutBtn" style="background: rgba(231, 76, 60, 0.8);">退出登录</button>
                 </div>
             </div>
-            <div id="testApiResult" style="margin-top: 10px;"></div>
+            <div id="testApiResult" style="margin-top: 15px; display: none;"></div>
         </div>
 
         <div class="card">
@@ -165,8 +32,18 @@
                     <input type="text" id="apiKey" name="apiKey" placeholder="输入您想使用的自定义 API Key" required>
                 </div>
                 <div class="form-group">
-                    <label for="cookieValues">Cursor Cookie 值（多个值请用逗号分隔）</label>
-                    <textarea id="cookieValues" name="cookieValues" placeholder="输入 WorkosCursorSessionToken 值，多个值请用逗号分隔" required></textarea>
+                    <label for="cookieValues">Cursor Cookie 值列表</label>
+                    <div class="cookies-container" id="addCookieTagsContainer">
+                        <!-- Cookie标签将在这里动态显示 -->
+                    </div>
+                    <div class="form-group">
+                        <label for="addNewCookie">添加新Cookie</label>
+                        <div class="form-input-group" style="display: flex; gap: 10px;">
+                            <input type="text" id="addNewCookie" placeholder="输入新的WorkosCursorSessionToken值">
+                            <button type="button" id="addNewCookieBtn" class="add-cookie-btn">添加</button>
+                        </div>
+                    </div>
+                    <textarea id="cookieValues" name="cookieValues" style="display: none;"></textarea>
                 </div>
                 <button type="submit">保存</button>
             </form>
@@ -175,24 +52,27 @@
         <div class="card">
             <h2>现有 API Key</h2>
             <div id="keyListMessage"></div>
-            <table id="keyTable">
-                <thead>
-                    <tr>
-                        <th>API Key</th>
-                        <th>Cookie 数量</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody id="keyList">
-                    <!-- 数据将通过 JavaScript 动态加载 -->
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table id="keyTable">
+                    <thead>
+                        <tr>
+                            <th>API Key</th>
+                            <th>Cookie 数量</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keyList">
+                        <!-- 数据将通过 JavaScript 动态加载 -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="card">
             <h2>使用说明</h2>
             <ol>
                 <li>添加自定义 API Key 和对应的 Cursor Cookie 值。</li>
+                <li>API Key 可以不添加 Cookie，但不会有任何功能，可以后续再添加 Cookie。</li>
                 <li>使用自定义 API Key 作为 OpenAI API 的认证凭证。</li>
                 <li>系统将自动在多个 Cookie 之间进行轮询。</li>
                 <li>API 端点：
@@ -214,8 +94,18 @@
             <form id="editCookieForm">
                 <input type="hidden" id="editApiKey" name="editApiKey">
                 <div class="form-group">
-                    <label for="editCookieValues">Cursor Cookie 值（多个值请用逗号分隔）</label>
-                    <textarea id="editCookieValues" name="editCookieValues" placeholder="输入 WorkosCursorSessionToken 值，多个值请用逗号分隔" required></textarea>
+                    <label for="editCookieValues">Cursor Cookie 值列表</label>
+                    <div class="cookies-container" id="cookieTagsContainer">
+                        <!-- Cookie标签将在这里动态显示 -->
+                    </div>
+                    <div class="form-group">
+                        <label for="newCookie">添加新Cookie</label>
+                        <div class="form-input-group" style="display: flex; gap: 10px;">
+                            <input type="text" id="newCookie" placeholder="输入新的WorkosCursorSessionToken值">
+                            <button type="button" id="addCookieBtn" class="add-cookie-btn">添加</button>
+                        </div>
+                    </div>
+                    <textarea id="editCookieValues" name="editCookieValues" style="display: none;"></textarea>
                 </div>
                 <button type="submit">保存修改</button>
             </form>
@@ -238,10 +128,14 @@
     </div>
 
     <!-- 新增：Cookie刷新功能 -->
-    <div class="card">
-        <h2>Cookie自动刷新</h2>
+    <div class="card" style="border: 2px dashed #e74c3c; position: relative;">
+        <div style="position: absolute; top: -10px; right: -10px; background: #e74c3c; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold;">不建议使用</div>
+        <h2>Cookie自动刷新 <span style="color: #e74c3c; font-size: 0.8em;">(不建议使用)</span></h2>
         <div class="form-group">
-            <div class="info">
+            <div class="info" style="color: #e74c3c;">
+                <strong>警告：</strong>此功能已标记为不建议使用，可能会导致账号风险。除非必要，请避免使用此功能。
+            </div>
+            <div class="info" style="margin-top: 10px;">
                 系统支持自动刷新Cookie，确保API Key始终有足够的可用Cookie。您可以在此手动触发刷新操作。
             </div>
             <div id="refreshCookieMessage"></div>
@@ -271,7 +165,7 @@
         <h2>获取Cursor Cookie</h2>
         <div class="form-group">
             <div class="info">
-                通过此功能可以快速获取新的Cursor Cookie并添加到系统中。点击按钮生成链接，完成登录后自动添加Cookie。
+                通过此功能可以快速获取新的Cursor Cookie并添加到系统中。点击按钮生成链接，完成登录后自动添加Cookie。系统将等待最多5分钟获取Cookie。
             </div>
             <div id="getCookieMessage"></div>
             <div style="margin-top: 15px;">
@@ -290,7 +184,7 @@
                     <div style="margin: 10px 0; word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 4px;">
                         <a id="loginLink" href="#" target="_blank"></a>
                     </div>
-                    <p>登录完成后系统将自动获取Cookie并添加到API Key中。</p>
+                    <p>登录完成后系统将自动获取Cookie并添加到API Key中。请等待最多5分钟，期间请勿关闭此页面。</p>
                 </div>
                 <div id="pollStatus" style="margin-top: 10px;">
                     <div>状态：<span id="pollStatusText">等待用户登录...</span></div>
@@ -302,809 +196,10 @@
         </div>
     </div>
 
-    <script>
-        // 获取模态框元素
-        const modal = document.getElementById('editModal');
-        const closeBtn = document.getElementsByClassName('close')[0];
-        
-        // 关闭模态框
-        closeBtn.onclick = function() {
-            modal.style.display = 'none';
-        }
-        
-        // 点击模态框外部关闭
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = 'none';
-            }
-        }
-        
-        // 加载现有 API Key
-        async function loadApiKeys() {
-            try {
-                console.log('开始加载API Keys...');
-                const response = await fetch('/v1/api-keys', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                console.log('API响应状态:', response.status);
-                const data = await response.json();
-                console.log('获取到的数据:', data);
-                
-                const keyList = document.getElementById('keyList');
-                keyList.innerHTML = '';
-                
-                if (data.success && data.apiKeys.length > 0) {
-                    data.apiKeys.forEach(key => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${key.key}</td>
-                            <td>${key.cookieCount}</td>
-                            <td>
-                                <button class="edit-btn" onclick="editApiKey('${key.key}')">修改</button>
-                                <button class="action-btn" onclick="deleteApiKey('${key.key}')">删除</button>
-                            </td>
-                        `;
-                        keyList.appendChild(row);
-                    });
-                } else {
-                    keyList.innerHTML = '<tr><td colspan="3">暂无 API Key</td></tr>';
-                }
-            } catch (error) {
-                console.error('加载 API Key 失败:', error);
-                document.getElementById('keyListMessage').innerHTML = `
-                    <div class="error">加载 API Key 失败: ${error.message}</div>
-                `;
-            }
-        }
+    <div class="sticky-actions">
+        <button id="clearCacheBtn" style="background-color: rgba(255,255,255,0.2);">清除缓存并刷新</button>
+    </div>
 
-        // 添加/更新 API Key
-        document.getElementById('addKeyForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const cookieValuesText = document.getElementById('cookieValues').value.trim();
-            
-            if (!apiKey || !cookieValuesText) {
-                document.getElementById('addKeyMessage').innerHTML = `
-                    <div class="error">API Key 和 Cookie 值不能为空</div>
-                `;
-                return;
-            }
-            
-            // 将逗号分隔的 Cookie 值转换为数组
-            const cookieValues = cookieValuesText.split(',').map(cookie => cookie.trim()).filter(cookie => cookie);
-            
-            try {
-                const response = await fetch('/v1/api-keys', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        apiKey,
-                        cookieValues,
-                    }),
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('addKeyMessage').innerHTML = `
-                        <div class="info">API Key 添加/更新成功</div>
-                    `;
-                    document.getElementById('apiKey').value = '';
-                    document.getElementById('cookieValues').value = '';
-                    loadApiKeys();
-                } else {
-                    document.getElementById('addKeyMessage').innerHTML = `
-                        <div class="error">API Key 添加/更新失败: ${data.error}</div>
-                    `;
-                }
-            } catch (error) {
-                console.error('添加/更新 API Key 失败:', error);
-                document.getElementById('addKeyMessage').innerHTML = `
-                    <div class="error">添加/更新 API Key 失败: ${error.message}</div>
-                `;
-            }
-        });
-
-        // 删除 API Key
-        async function deleteApiKey(apiKey) {
-            if (!confirm(`确定要删除 API Key "${apiKey}" 吗？`)) {
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/v1/api-keys/${encodeURIComponent(apiKey)}`, {
-                    method: 'DELETE',
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('keyListMessage').innerHTML = `
-                        <div class="info">API Key 删除成功</div>
-                    `;
-                    loadApiKeys();
-                } else {
-                    document.getElementById('keyListMessage').innerHTML = `
-                        <div class="error">API Key 删除失败: ${data.error}</div>
-                    `;
-                }
-            } catch (error) {
-                console.error('删除 API Key 失败:', error);
-                document.getElementById('keyListMessage').innerHTML = `
-                    <div class="error">删除 API Key 失败: ${error.message}</div>
-                `;
-            }
-        }
-        
-        // 获取API Key的Cookie值
-        async function getCookiesForApiKey(apiKey) {
-            try {
-                const response = await fetch(`/v1/api-keys/${encodeURIComponent(apiKey)}/cookies`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                return data.cookies;
-            } catch (error) {
-                console.error(`获取 ${apiKey} 的Cookie值失败:`, error);
-                throw error;
-            }
-        }
-        
-        // 修改 API Key
-        async function editApiKey(apiKey) {
-            try {
-                document.getElementById('editModalMessage').innerHTML = '';
-                document.getElementById('editApiKey').value = apiKey;
-                
-                // 获取当前Cookie值
-                const cookies = await getCookiesForApiKey(apiKey);
-                document.getElementById('editCookieValues').value = cookies.join(',');
-                
-                // 显示模态框
-                modal.style.display = 'block';
-            } catch (error) {
-                alert(`获取 ${apiKey} 的Cookie值失败: ${error.message}`);
-            }
-        }
-        
-        // 提交修改表单
-        document.getElementById('editCookieForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const apiKey = document.getElementById('editApiKey').value.trim();
-            const cookieValuesText = document.getElementById('editCookieValues').value.trim();
-            
-            if (!apiKey || !cookieValuesText) {
-                document.getElementById('editModalMessage').innerHTML = `
-                    <div class="error">API Key 和 Cookie 值不能为空</div>
-                `;
-                return;
-            }
-            
-            // 将逗号分隔的 Cookie 值转换为数组
-            const cookieValues = cookieValuesText.split(',').map(cookie => cookie.trim()).filter(cookie => cookie);
-            
-            try {
-                const response = await fetch('/v1/api-keys', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        apiKey,
-                        cookieValues,
-                    }),
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('editModalMessage').innerHTML = `
-                        <div class="info">Cookie 修改成功</div>
-                    `;
-                    setTimeout(() => {
-                        modal.style.display = 'none';
-                        loadApiKeys();
-                    }, 1500);
-                } else {
-                    document.getElementById('editModalMessage').innerHTML = `
-                        <div class="error">Cookie 修改失败: ${data.error}</div>
-                    `;
-                }
-            } catch (error) {
-                console.error('修改 Cookie 失败:', error);
-                document.getElementById('editModalMessage').innerHTML = `
-                    <div class="error">修改 Cookie 失败: ${error.message}</div>
-                `;
-            }
-        });
-
-        // 测试API连接
-        document.getElementById('testApiBtn').addEventListener('click', async function() {
-            const resultDiv = document.getElementById('testApiResult');
-            resultDiv.innerHTML = '<div class="info">正在测试API连接...</div>';
-            
-            try {
-                const response = await fetch('/v1/api-keys', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                resultDiv.innerHTML = `<div class="info">API响应状态: ${response.status}</div>`;
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                resultDiv.innerHTML += `<div class="info">获取到的数据: ${JSON.stringify(data)}</div>`;
-            } catch (error) {
-                console.error('测试API失败:', error);
-                resultDiv.innerHTML = `<div class="error">测试API失败: ${error.message}</div>`;
-            }
-        });
-        
-        // 清除缓存并刷新
-        document.getElementById('clearCacheBtn').addEventListener('click', function() {
-            // 清除缓存
-            if ('caches' in window) {
-                caches.keys().then(function(names) {
-                    for (let name of names) {
-                        caches.delete(name);
-                    }
-                });
-            }
-            
-            // 强制刷新页面（绕过缓存）
-            window.location.reload(true);
-        });
-
-        // 获取无效Cookie列表
-        async function getInvalidCookies() {
-            try {
-                const response = await fetch('/v1/invalid-cookies', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                return data.invalidCookies;
-            } catch (error) {
-                console.error('获取无效Cookie失败:', error);
-                throw error;
-            }
-        }
-        
-        // 清除特定无效Cookie
-        async function clearInvalidCookie(cookie) {
-            try {
-                const response = await fetch(`/v1/invalid-cookies/${encodeURIComponent(cookie)}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                return data.success;
-            } catch (error) {
-                console.error(`清除无效Cookie失败:`, error);
-                throw error;
-            }
-        }
-        
-        // 清除所有无效Cookie
-        async function clearAllInvalidCookies() {
-            try {
-                const response = await fetch('/v1/invalid-cookies', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                return data.success;
-            } catch (error) {
-                console.error('清除所有无效Cookie失败:', error);
-                throw error;
-            }
-        }
-        
-        // 渲染无效Cookie列表
-        async function renderInvalidCookies() {
-            const container = document.getElementById('invalidCookiesContainer');
-            
-            try {
-                const invalidCookies = await getInvalidCookies();
-                
-                if (invalidCookies.length === 0) {
-                    container.innerHTML = '<div class="info">没有检测到无效Cookie</div>';
-                    return;
-                }
-                
-                let html = '<table><thead><tr><th>无效Cookie</th><th>操作</th></tr></thead><tbody>';
-                
-                invalidCookies.forEach(cookie => {
-                    // 截断显示cookie，避免页面过长
-                    const displayCookie = cookie.length > 50 ? cookie.substring(0, 50) + '...' : cookie;
-                    
-                    html += `
-                        <tr>
-                            <td class="cookie-text" title="${cookie}">${displayCookie}</td>
-                            <td>
-                                <button class="action-btn clear-invalid-cookie" data-cookie="${cookie}">
-                                    清除
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                html += '</tbody></table>';
-                container.innerHTML = html;
-                
-                // 添加清除按钮事件监听
-                document.querySelectorAll('.clear-invalid-cookie').forEach(button => {
-                    button.addEventListener('click', async function() {
-                        const cookie = this.getAttribute('data-cookie');
-                        
-                        try {
-                            await clearInvalidCookie(cookie);
-                            showMessage('invalidCookiesContainer', '无效Cookie已清除', 'info');
-                            renderInvalidCookies(); // 重新渲染列表
-                        } catch (error) {
-                            showMessage('invalidCookiesContainer', `清除失败: ${error.message}`, 'error');
-                        }
-                    });
-                });
-                
-            } catch (error) {
-                container.innerHTML = `<div class="error">加载失败: ${error.message}</div>`;
-            }
-        }
-        
-        // 清除所有无效Cookie按钮事件
-        document.getElementById('clearAllInvalidCookies').addEventListener('click', async function() {
-            try {
-                await clearAllInvalidCookies();
-                showMessage('invalidCookiesContainer', '所有无效Cookie已清除', 'info');
-                renderInvalidCookies(); // 重新渲染列表
-            } catch (error) {
-                showMessage('invalidCookiesContainer', `清除失败: ${error.message}`, 'error');
-            }
-        });
-        
-        // 页面加载时获取 API Key 列表和无效Cookie列表
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAuth();
-            loadApiKeys();
-            renderInvalidCookies();
-            populateRefreshApiKeySelect();
-            populateCookieApiKeySelect();
-        });
-
-        // 显示消息的通用函数
-        function showMessage(containerId, message, type) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = `<div class="${type}">${message}</div>`;
-        }
-
-        // 填充刷新API Key的下拉选择框
-        async function populateRefreshApiKeySelect() {
-            try {
-                const apiKeys = await getApiKeys();
-                const select = document.getElementById('refreshApiKey');
-                
-                // 清空现有选项（保留"所有API Key"选项）
-                while (select.options.length > 1) {
-                    select.remove(1);
-                }
-                
-                // 添加API Key选项
-                apiKeys.forEach(key => {
-                    const option = document.createElement('option');
-                    option.value = key.key;
-                    option.textContent = `${key.key} (${key.cookieCount} 个Cookie)`;
-                    select.appendChild(option);
-                });
-            } catch (error) {
-                console.error('加载API Key选项失败:', error);
-            }
-        }
-
-        // 获取API Keys的辅助函数
-        async function getApiKeys() {
-            const response = await fetch('/v1/api-keys', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cache-Control': 'no-cache'
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            return data.success ? data.apiKeys : [];
-        }
-
-        // 刷新Cookie按钮事件
-        document.getElementById('refreshCookieBtn').addEventListener('click', async function() {
-            const refreshBtn = this;
-            const apiKey = document.getElementById('refreshApiKey').value;
-            const statusContainer = document.getElementById('refreshStatusContainer');
-            const statusText = document.getElementById('refreshStatus');
-            const progressBar = document.getElementById('refreshProgress');
-            
-            // 禁用按钮，显示状态容器
-            refreshBtn.disabled = true;
-            statusContainer.style.display = 'block';
-            statusText.textContent = '正在发送刷新请求...';
-            progressBar.value = 10;
-            
-            try {
-                // 构建请求URL
-                let url = '/v1/refresh-cookies';
-                if (apiKey) {
-                    url += `?apiKey=${encodeURIComponent(apiKey)}`;
-                }
-                
-                // 发送刷新请求
-                statusText.textContent = '正在发送刷新请求...';
-                progressBar.value = 20;
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                // 显示长时间等待提示
-                statusText.textContent = '刷新请求已发送，请耐心等待2-12分钟...';
-                progressBar.value = 50;
-                showMessage('refreshCookieMessage', '刷新请求已发送，由于需要访问Cursor官网获取新Cookie，整个过程可能需要2-12分钟，请耐心等待。您可以关闭此页面，稍后再来查看结果。', 'info');
-                
-                // 启动定时检查刷新状态
-                let checkInterval = setInterval(async () => {
-                    try {
-                        const statusResponse = await fetch('/v1/refresh-status', {
-                            method: 'GET',
-                            headers: {
-                                'Cache-Control': 'no-cache'
-                            }
-                        });
-                        
-                        if (!statusResponse.ok) {
-                            throw new Error(`HTTP错误: ${statusResponse.status} ${statusResponse.statusText}`);
-                        }
-                        
-                        const statusData = await statusResponse.json();
-                        const refreshData = statusData.data;
-                        
-                        // 更新状态信息
-                        statusText.textContent = refreshData.message || '正在刷新...';
-                        
-                        // 根据状态更新进度条和UI
-                        if (refreshData.status === 'completed') {
-                            // 刷新完成
-                            progressBar.value = 100;
-                            statusText.textContent = `刷新完成: ${refreshData.message}`;
-                            clearInterval(checkInterval);
-                            
-                            // 重新加载API Key列表
-                            await loadApiKeys();
-                            await populateRefreshApiKeySelect();
-                            
-                            // 显示成功消息
-                            showMessage('refreshCookieMessage', `刷新完成: ${refreshData.message}`, 'success');
-                            
-                            // 启用按钮
-                            refreshBtn.disabled = false;
-                            
-                            // 3秒后隐藏状态容器
-                            setTimeout(() => {
-                                statusContainer.style.display = 'none';
-                            }, 3000);
-                        } else if (refreshData.status === 'failed') {
-                            // 刷新失败
-                            progressBar.value = 0;
-                            statusText.textContent = `刷新失败: ${refreshData.message}`;
-                            clearInterval(checkInterval);
-                            
-                            // 显示错误消息
-                            showMessage('refreshCookieMessage', `刷新失败: ${refreshData.message}`, 'error');
-                            
-                            // 启用按钮
-                            refreshBtn.disabled = false;
-                        } else if (refreshData.status === 'running') {
-                            // 正在刷新
-                            progressBar.value = 75;
-                        } else if (!refreshData.isRunning) {
-                            // 未知状态但不在运行
-                            clearInterval(checkInterval);
-                            refreshBtn.disabled = false;
-                        }
-                    } catch (error) {
-                        console.error('检查刷新状态失败:', error);
-                    }
-                }, 5000); // 每5秒检查一次
-                
-                // 设置超时检查，12分钟后如果还没完成就停止检查
-                setTimeout(() => {
-                    if (checkInterval) {
-                        clearInterval(checkInterval);
-                        refreshBtn.disabled = false;
-                        statusContainer.style.display = 'none';
-                    }
-                }, 720000);
-            } catch (error) {
-                console.error('刷新Cookie失败:', error);
-                statusText.textContent = '刷新请求发送失败';
-                progressBar.value = 0;
-                showMessage('refreshCookieMessage', `刷新请求发送失败: ${error.message}`, 'error');
-                refreshBtn.disabled = false;
-            }
-        });
-
-        // 检查登录状态
-        function checkAuth() {
-            const token = localStorage.getItem('adminToken');
-            if (!token) {
-                window.location.href = '/login.html';
-                return;
-            }
-            
-            // 验证token
-            fetch('/v1/admin/verify', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    localStorage.removeItem('adminToken');
-                    window.location.href = '/login.html';
-                } else {
-                    // 显示管理员用户名
-                    document.getElementById('adminUsername').textContent = `管理员：${data.username}`;
-                }
-            })
-            .catch(error => {
-                console.error('验证失败:', error);
-                localStorage.removeItem('adminToken');
-                window.location.href = '/login.html';
-            });
-        }
-
-        // 退出登录
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.removeItem('adminToken');
-            window.location.href = '/login.html';
-        });
-
-        // 添加token到所有API请求
-        function addAuthHeader(headers = {}) {
-            const token = localStorage.getItem('adminToken');
-            return {
-                ...headers,
-                'Authorization': `Bearer ${token}`
-            };
-        }
-
-        // 修改所有fetch请求，添加token
-        const originalFetch = window.fetch;
-        window.fetch = function(url, options = {}) {
-            // 只对管理页面的API请求添加token
-            if (url.includes('/v1/api-keys') || 
-                url.includes('/v1/invalid-cookies') || 
-                url.includes('/v1/refresh-cookies') ||
-                url.includes('/v1/generate-cookie-link') ||
-                url.includes('/v1/check-cookie-status')) {
-                options.headers = addAuthHeader(options.headers);
-            }
-            return originalFetch(url, options);
-        };
-
-        // 为Cookie获取功能填充API Key下拉框
-        function populateCookieApiKeySelect() {
-            populateRefreshApiKeySelect().then(() => {
-                // 复制refreshApiKey的选项到targetApiKey
-                const sourceSelect = document.getElementById('refreshApiKey');
-                const targetSelect = document.getElementById('targetApiKey');
-                
-                // 保留第一个选项（"所有API Key"）
-                while (targetSelect.options.length > 1) {
-                    targetSelect.remove(1);
-                }
-                
-                // 复制选项
-                for (let i = 1; i < sourceSelect.options.length; i++) {
-                    const option = document.createElement('option');
-                    option.value = sourceSelect.options[i].value;
-                    option.textContent = sourceSelect.options[i].textContent;
-                    targetSelect.appendChild(option);
-                }
-            });
-        }
-
-        // 生成登录链接
-        document.getElementById('generateLinkBtn').addEventListener('click', async function() {
-            const messageContainer = document.getElementById('getCookieMessage');
-            const linkContainer = document.getElementById('loginLinkContainer');
-            const loginLink = document.getElementById('loginLink');
-            const pollStatusText = document.getElementById('pollStatusText');
-            const pollProgress = document.getElementById('pollProgress');
-            const targetApiKey = document.getElementById('targetApiKey').value;
-
-            try {
-                // 显示加载状态
-                messageContainer.innerHTML = '<div class="info">正在生成登录链接...</div>';
-                
-                // 请求生成登录链接
-                const response = await fetch('/v1/generate-cookie-link', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    },
-                    body: JSON.stringify({ apiKey: targetApiKey })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                
-                if (!data.success) {
-                    throw new Error(data.message || '生成链接失败');
-                }
-                
-                // 显示链接
-                loginLink.href = data.url;
-                loginLink.textContent = data.url;
-                linkContainer.style.display = 'block';
-                
-                // 更新状态
-                pollStatusText.textContent = '等待用户登录...';
-                pollProgress.value = 10;
-                
-                // 开始轮询获取cookie状态
-                messageContainer.innerHTML = '<div class="info">链接已生成，请点击链接登录Cursor账号并授权</div>';
-                
-                // 开始轮询cookie状态
-                pollForCookieStatus(data.uuid);
-                
-            } catch (error) {
-                console.error('生成登录链接失败:', error);
-                messageContainer.innerHTML = `<div class="error">生成链接失败: ${error.message}</div>`;
-            }
-        });
-
-        // 轮询Cookie获取状态
-        function pollForCookieStatus(uuid) {
-            const messageContainer = document.getElementById('getCookieMessage');
-            const pollStatusText = document.getElementById('pollStatusText');
-            const pollProgress = document.getElementById('pollProgress');
-            const maxAttempts = 120; // 最多尝试120次，相当于2分钟
-            let attempt = 0;
-            
-            // 更新状态显示
-            pollStatusText.textContent = '等待用户登录...';
-            
-            const interval = setInterval(function() {
-                attempt++;
-                
-                try {
-                    // 更新进度条（保持在10%-90%之间，表示等待中）
-                    pollProgress.value = 10 + Math.min(80, attempt) * 0.8;
-                    
-                    // 请求检查状态
-                    fetch(`/v1/check-cookie-status?uuid=${encodeURIComponent(uuid)}`, {
-                        method: 'GET',
-                        headers: {
-                            'Cache-Control': 'no-cache'
-                        }
-                    }).then(function(response) {
-                        if (!response.ok) {
-                            pollStatusText.textContent = `请求失败: ${response.status}`;
-                            return;
-                        }
-                        
-                        return response.json();
-                    }).then(function(data) {
-                        if (data.success) {
-                            // Cookie获取成功
-                            clearInterval(interval);
-                            pollProgress.value = 100;
-                            pollStatusText.textContent = '获取Cookie成功！';
-                            messageContainer.innerHTML = `<div class="info">成功获取并添加Cookie！${data.message || ''}</div>`;
-                            
-                            // 刷新API Keys列表
-                            loadApiKeys();
-                            populateCookieApiKeySelect();
-                            
-                        } else if (data.status === 'waiting') {
-                            // 继续等待
-                            pollStatusText.textContent = '等待用户登录...';
-                        } else if (data.status === 'failed') {
-                            // 获取失败
-                            clearInterval(interval);
-                            pollStatusText.textContent = '获取失败';
-                            pollProgress.value = 0;
-                            messageContainer.innerHTML = `<div class="error">获取Cookie失败: ${data.message || '未知错误'}</div>`;
-                        }
-                    }).catch(function(error) {
-                        console.error('轮询Cookie状态失败:', error);
-                        pollStatusText.textContent = `轮询出错: ${error.message}`;
-                    });
-                    
-                } catch (error) {
-                    console.error('轮询Cookie状态出错:', error);
-                    pollStatusText.textContent = `轮询出错: ${error.message}`;
-                }
-                
-                // 达到最大尝试次数后停止
-                if (attempt >= maxAttempts) {
-                    clearInterval(interval);
-                    pollStatusText.textContent = '超时，请重试';
-                    pollProgress.value = 0;
-                    messageContainer.innerHTML = '<div class="error">获取Cookie超时，请重新尝试</div>';
-                }
-                
-            }, 1000); // 每秒轮询一次
-        }
-    </script>
+    <script src="scripts.js"></script>
 </body>
 </html> 

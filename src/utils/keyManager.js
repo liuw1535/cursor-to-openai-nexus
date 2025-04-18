@@ -292,7 +292,7 @@ function getCookieForApiKey(apiKey, strategy = config.defaultRotationStrategy) {
         // 随机策略
         const randomIndex = Math.floor(Math.random() * cookies.length);
         return cookies[randomIndex];
-    } else {
+    } else if(strategy === 'round-robin') {
         // 轮询策略（round-robin）
         let currentIndex = rotationIndexes.get(apiKey) || 0;
         const cookie = cookies[currentIndex];
@@ -302,6 +302,9 @@ function getCookieForApiKey(apiKey, strategy = config.defaultRotationStrategy) {
         rotationIndexes.set(apiKey, currentIndex);
         
         return cookie;
+    } else {
+      // 默认策略(default)
+        return cookies[0];
     }
 }
 

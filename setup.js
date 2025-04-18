@@ -22,15 +22,15 @@ MORGAN_FORMAT=tiny
 # 格式: {"自定义API Key": "Cookie值"} 或 {"自定义API Key": ["Cookie值1", "Cookie值2"]}
 API_KEYS={API_KEYS_PLACEHOLDER}
 
-# 轮询策略 (random 或 round-robin)
-ROTATION_STRATEGY=round-robin
+# 轮询策略 (random 或 round-robin 或 default)
+ROTATION_STRATEGY=default
 
 # Cursor校验和 (可选)
 # x-cursor-checksum=xxxxxxxx 
 
 # 自动刷新Cookie设置
 # 是否启用自动刷新Cookie (true 或 false)
-ENABLE_AUTO_REFRESH=true
+ENABLE_AUTO_REFRESH=false
 
 # 自动刷新Cookie的定时规则 (Cron表达式)
 # 默认每6小时执行一次
