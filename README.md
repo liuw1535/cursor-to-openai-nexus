@@ -10,6 +10,7 @@
 - 📧 **邮箱管理**: 支持管理多个Gmail账号用于自动注册
 - 📊 **状态监控**: 查看API Key使用情况和Cookie状态
 - 🔧 **易于维护**: 便捷的维护脚本，简化日常操作
+- 🤖 **多格式兼容**: 支持OpenAI和Anthropic Claude API格式的请求
 
 ## 快速开始
 
@@ -183,9 +184,34 @@ docker compose logs -f
 docker compose down
 ```
 
+## 如何使用服务器
+
+### OpenAI API
+
+1. 获取模型列表
+    - URL：`http://localhost:3010/v1/models`
+    - 请求方式：`GET`
+    - 认证方式：`Bearer Token`（自定义API Key或WorkosCursorSessionToken值）
+
+2. 聊天补全
+    - URL：`http://localhost:3010/v1/chat/completions`
+    - 请求方式：`POST`
+    - 认证方式：`Bearer Token`（自定义API Key或WorkosCursorSessionToken值）
+
+请求和响应格式请参考OpenAI API文档。
+
+### Anthropic API
+
+1. 消息API
+    - URL：`http://localhost:3010/v1/messages`
+    - 请求方式：`POST`
+    - 认证方式：`Bearer Token`（自定义API Key或WorkosCursorSessionToken值）
+
+请求和响应格式请参考Anthropic Claude API文档。
+
 ## API使用示例
 
-### Python示例
+### OpenAI API示例
 
 ```python
 from openai import OpenAI
@@ -207,6 +233,26 @@ response = client.chat.completions.create(
 )
 
 print(response.choices)
+```
+
+### Anthropic API 示例
+
+```python
+from anthropic import Anthropic
+
+# 使用自定义API Key
+anthro = Anthropic(api_key="your_custom_api_key",
+                base_url="http://localhost:3010/v1")
+
+response = anthro.messages.create(
+    model="claude-3-7-sonnet",
+    messages=[
+        {"role": "user", "content": "Hello."}
+    ],
+    max_tokens=1024
+)
+
+print(response.content)
 ```
 
 ## 注意事项
