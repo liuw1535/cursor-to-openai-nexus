@@ -1,6 +1,19 @@
 const fs = require('fs');
 const path = require('path');
 
+// 添加自己的简单日志函数，防止循环依赖
+function log(level, message) {
+  // 只在控制台输出，不写入文件
+  const timestamp = new Date().toISOString();
+  if (level === 'ERROR') {
+    console.error(`[ERROR] ${timestamp} ${message}`);
+  } else if (level === 'WARN') {
+    console.warn(`[WARN] ${timestamp} ${message}`);
+  } else {
+    console.log(`[INFO] ${timestamp} ${message}`);
+  }
+}
+
 /**
  * 检查 .env 文件是否存在
  * @returns {boolean} 文件是否存在
@@ -44,29 +57,29 @@ function checkRequiredEnvVars() {
  * 执行环境检查，如果不符合要求则退出程序
  */
 function enforceEnvCheck() {
-  console.log('正在检查环境配置...');
+  log('INFO', '正在检查环境配置...');
   
   // 检查 .env 文件是否存在
   const envFileExists = checkEnvFileExists();
   if (!envFileExists) {
-    console.error('\n错误: 未找到 .env 文件!');
-    console.error('请根据 .env.example 创建 .env 文件并配置必要的环境变量。');
-    console.error('执行以下命令复制示例文件: cp .env.example .env,或执行npm run setup\n');
+    log('ERROR', '\n错误: 未找到 .env 文件!');
+    log('ERROR', '请根据 .env.example 创建 .env 文件并配置必要的环境变量。');
+    log('ERROR', '执行以下命令复制示例文件: cp .env.example .env,或执行npm run setup\n');
     process.exit(1); // 退出程序，状态码 1 表示错误
   }
   
   // 检查必要的环境变量
   const { passed, missingVars } = checkRequiredEnvVars();
   if (!passed) {
-    console.error('\n错误: 以下必要的环境变量未在 .env 文件中设置:');
+    log('ERROR', '\n错误: 以下必要的环境变量未在 .env 文件中设置:');
     missingVars.forEach(varName => {
-      console.error(`  - ${varName}`);
+      log('ERROR', `  - ${varName}`);
     });
-    console.error('\n请在 .env 文件中配置这些变量后重新启动程序。\n');
+    log('ERROR', '\n请在 .env 文件中配置这些变量后重新启动程序。\n');
     process.exit(1); // 退出程序，状态码 1 表示错误
   }
   
-  console.log('环境检查通过，继续启动程序...');
+  log('INFO', '环境检查通过，继续启动程序...');
 }
 
 module.exports = {

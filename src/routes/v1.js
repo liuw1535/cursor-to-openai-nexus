@@ -11,6 +11,7 @@ const path = require('path');
 const admin = require('../models/admin');
 const config = require('../config/config');
 const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 // 存储刷新状态的变量
 let refreshStatus = {
@@ -33,7 +34,7 @@ router.get('/admin/check', (req, res) => {
       exists: admin.hasAdmin()
     });
   } catch (error) {
-    console.error('检查管理员账号失败:', error);
+    logger.error('检查管理员账号失败:', error);
     return res.status(500).json({
       success: false,
       message: error.message
@@ -61,7 +62,7 @@ router.post('/admin/register', (req, res) => {
       token
     });
   } catch (error) {
-    console.error('注册管理员失败:', error);
+    logger.error('注册管理员失败:', error);
     return res.status(400).json({
       success: false,
       message: error.message
@@ -89,7 +90,7 @@ router.post('/admin/login', (req, res) => {
       token
     });
   } catch (error) {
-    console.error('登录失败:', error);
+    logger.error('登录失败:', error);
     return res.status(400).json({
       success: false,
       message: error.message
@@ -113,7 +114,7 @@ router.get('/admin/verify', (req, res) => {
 
     return res.json(result);
   } catch (error) {
-    console.error('验证token失败:', error);
+    logger.error('验证token失败:', error);
     return res.status(401).json({
       success: false,
       message: error.message
@@ -139,7 +140,7 @@ router.post("/api-keys", async (req, res) => {
       message: 'API key added or updated successfully',
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -149,10 +150,8 @@ router.post("/api-keys", async (req, res) => {
 // 获取所有API Keys
 router.get("/api-keys", async (req, res) => {
   try {
-    console.log('收到获取API Keys请求');
+    logger.info('收到获取API Keys请求');
     const apiKeys = keyManager.getAllApiKeys();
-    console.log('获取到的API Keys:', apiKeys);
-
     const result = {
       success: true,
       apiKeys: apiKeys.map(apiKey => ({
@@ -160,11 +159,11 @@ router.get("/api-keys", async (req, res) => {
         cookieCount: keyManager.getAllCookiesForApiKey(apiKey).length,
       })),
     };
-    console.log('返回结果:', result);
-
+    logger.info('返回结果:', result);
+    
     return res.json(result);
   } catch (error) {
-    console.error('获取API Keys失败:', error);
+    logger.error('获取API Keys失败:', error);
     return res.status(500).json({
       error: 'Internal server error',
       message: error.message
@@ -184,7 +183,7 @@ router.delete("/api-keys/:apiKey", async (req, res) => {
       message: 'API key removed successfully',
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -195,17 +194,17 @@ router.delete("/api-keys/:apiKey", async (req, res) => {
 router.get("/api-keys/:apiKey/cookies", async (req, res) => {
   try {
     const { apiKey } = req.params;
-    console.log(`收到获取API Key ${apiKey}的Cookie值请求`);
-
+    logger.info(`收到获取API Key ${apiKey}的Cookie值请求`);
+    
     const cookies = keyManager.getAllCookiesForApiKey(apiKey);
-    console.log(`API Key ${apiKey}的Cookie值:`, cookies);
-
+    logger.info(`API Key ${apiKey}的Cookie值:`, cookies);
+    
     return res.json({
       success: true,
       cookies: cookies
     });
   } catch (error) {
-    console.error(`获取API Key ${req.params.apiKey}的Cookie值失败:`, error);
+    logger.error(`获取API Key ${req.params.apiKey}的Cookie值失败:`, error);
     return res.status(500).json({
       error: 'Internal server error',
       message: error.message
@@ -223,7 +222,7 @@ router.get("/invalid-cookies", async (req, res) => {
       invalidCookies: Array.from(invalidCookies)
     });
   } catch (error) {
-    console.error('获取无效cookie失败:', error);
+    logger.error('获取无效cookie失败:', error);
     return res.status(500).json({
       error: 'Internal server error',
       message: error.message
@@ -242,7 +241,7 @@ router.delete("/invalid-cookies/:cookie", async (req, res) => {
       message: success ? '无效cookie已清除' : '未找到指定的无效cookie'
     });
   } catch (error) {
-    console.error('清除无效cookie失败:', error);
+    logger.error('清除无效cookie失败:', error);
     return res.status(500).json({
       error: 'Internal server error',
       message: error.message
@@ -260,7 +259,7 @@ router.delete("/invalid-cookies", async (req, res) => {
       message: '所有无效cookie已清除'
     });
   } catch (error) {
-    console.error('清除所有无效cookie失败:', error);
+    logger.error('清除所有无效cookie失败:', error);
     return res.status(500).json({
       error: 'Internal server error',
       message: error.message
@@ -327,7 +326,7 @@ router.get("/models", async (req, res) => {
     }
   }
   catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({
       error: 'Internal server error',
     });
@@ -437,8 +436,7 @@ router.post('/chat/completions', async (req, res) => {
       res.setHeader('Connection', 'keep-alive');
 
       const responseId = `chatcmpl-${uuidv4()}`;
-
-
+      let isThinking_status = 0; //0为没有思考，1为处于思考状态
       try {
         let responseEnded = false; // 添加标志，标记响应是否已结束
 
@@ -447,25 +445,25 @@ router.post('/chat/completions', async (req, res) => {
           if (responseEnded) {
             continue;
           }
-
-          let text = chunkToUtf8String(chunk);
+          
+          let result = chunkToUtf8String(chunk);
           // 输出完整的text内容和类型，便于调试
           //console.log("收到的响应:", typeof text, text && typeof text === 'object' ? JSON.stringify(text) : text);
 
 
           // 检查是否返回了错误对象
-          if (text && typeof text === 'object' && text.error) {
+          if (result && typeof result === 'object' && result.error) {
             // 检查是否包含特定的无效cookie错误信息
-            const errorStr = typeof text.error === 'string' ? text.error : JSON.stringify(text.error);
-
+            const errorStr = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
             // 处理错误并获取结果
             const errorResult = handleCursorError(errorStr, bearerToken, originalAuthToken);
 
             // 如果是需要移除的cookie，从API Key中移除
             if (errorResult.shouldRemoveCookie) {
               const removed = keyManager.removeCookieFromApiKey(bearerToken, originalAuthToken);
-              console.log(`Cookie移除${removed ? '成功' : '失败'}`);
 
+              logger.info(`Cookie移除${removed ? '成功' : '失败'}`);
+              
               // 如果成功移除，在错误消息中添加明确提示
               if (removed) {
                 errorResult.message = `⚠️ 目前Cookie已从API Key中移除 ⚠️\n\n${errorResult.message}`;
@@ -494,7 +492,18 @@ router.post('/chat/completions', async (req, res) => {
             responseEnded = true; // 标记响应已结束
             break; // 跳出循环，不再处理后续数据
           }
-
+          let text = result.content;
+          if (result.isThink && isThinking_status == 0)
+          {
+            isThinking_status = 1; //存在思考内容，并且状态为开始思考
+            text = "<think>"+"\n"+text;
+          }
+          else if (!result.isThink && isThinking_status == 1)
+          {
+            isThinking_status = 0; //初始化状态
+            console.log("text:" + text);
+            text = text+"\n"+"</think>"+"\n";
+          }
           if (text && text.length > 0) {
             res.write(
               `data: ${JSON.stringify({
@@ -521,7 +530,7 @@ router.post('/chat/completions', async (req, res) => {
           res.end();
         }
       } catch (streamError) {
-        console.error('Stream error:', streamError);
+        logger.error('Stream error:', streamError);
         // 确保在发送错误信息前检查响应是否已结束
         if (!res.writableEnded) {
           if (streamError.name === 'TimeoutError') {
@@ -577,26 +586,28 @@ router.post('/chat/completions', async (req, res) => {
           if (responseEnded) {
             continue;
           }
-
-          const chunkText = chunkToUtf8String(chunk);
+          
+          const result = chunkToUtf8String(chunk);
           // 输出完整的chunkText内容和类型，便于调试
           //console.log("收到的非流式响应:", typeof chunkText, chunkText && typeof chunkText === 'object' ? JSON.stringify(chunkText) : chunkText);
 
           // 检查是否返回了错误对象
-          if (chunkText && typeof chunkText === 'object' && chunkText.error) {
+          if (result && typeof result === 'object' && result.error) {
             //console.error('检测到错误响应:', chunkText.error);
 
             // 检查是否包含特定的无效cookie错误信息
-            const errorStr = typeof chunkText.error === 'string' ? chunkText.error : JSON.stringify(chunkText.error);
 
+            const errorStr = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
+            
             // 处理错误并获取结果
             const errorResult = handleCursorError(errorStr, bearerToken, originalAuthToken);
 
             // 如果是需要移除的cookie，从API Key中移除
             if (errorResult.shouldRemoveCookie) {
               const removed = keyManager.removeCookieFromApiKey(bearerToken, originalAuthToken);
-              console.log(`Cookie移除${removed ? '成功' : '失败'}`);
 
+              logger.info(`Cookie移除${removed ? '成功' : '失败'}`);
+              
               // 如果成功移除，在错误消息中添加明确提示
               if (removed) {
                 errorResult.message = `⚠️ 目前Cookie已从API Key中移除 ⚠️\n\n${errorResult.message}`;
@@ -631,6 +642,7 @@ router.post('/chat/completions', async (req, res) => {
           }
 
           // 正常文本，添加到结果中
+          let chunkText = result.content;
           if (chunkText && typeof chunkText === 'string') {
             text += chunkText;
           }
@@ -666,7 +678,7 @@ router.post('/chat/completions', async (req, res) => {
           });
         }
       } catch (error) {
-        console.error('Non-stream error:', error);
+        logger.error('Non-stream error:', error);
         // 确保在发送错误信息前检查响应是否已结束
         if (!res.headersSent) {
           if (error.name === 'TimeoutError') {
@@ -699,7 +711,7 @@ router.post('/chat/completions', async (req, res) => {
       }
     }
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
     if (!res.headersSent) {
       const errorText = error.name === 'TimeoutError' ? '请求超时' : '服务器内部错误';
 
@@ -779,9 +791,9 @@ router.post("/refresh-cookies", async (req, res) => {
       endTime: null,
       error: null
     };
-
-    console.log(`收到刷新Cookie请求，API Key: ${apiKey || '所有'}`);
-
+    
+    logger.info(`收到刷新Cookie请求，API Key: ${apiKey || '所有'}`);
+    
     // 构建命令行参数
     const args = [];
     if (apiKey) {
@@ -802,8 +814,9 @@ router.post("/refresh-cookies", async (req, res) => {
     refreshProcess.stdout.on('data', (data) => {
       const text = data.toString();
       output += text;
-      console.log(`刷新进程输出: ${text}`);
 
+      logger.info(`刷新进程输出: ${text}`);
+      
       // 更新状态消息
       if (text.includes('开始自动刷新')) {
         refreshStatus.message = '正在刷新Cookie...';
@@ -815,16 +828,18 @@ router.post("/refresh-cookies", async (req, res) => {
     refreshProcess.stderr.on('data', (data) => {
       const text = data.toString();
       output += text;
-      console.error(`刷新进程错误: ${text}`);
 
+      logger.error(`刷新进程错误: ${text}`);
+      
       // 更新错误信息
       refreshStatus.error = text.trim();
       refreshStatus.message = `发生错误: ${text.trim()}`;
     });
 
     refreshProcess.on('close', (code) => {
-      console.log(`刷新进程退出，代码: ${code}`);
 
+      logger.info(`刷新进程退出，代码: ${code}`);
+      
       refreshStatus.isRunning = false;
       refreshStatus.endTime = new Date();
 
@@ -842,11 +857,11 @@ router.post("/refresh-cookies", async (req, res) => {
         // 子进程执行完成后，重新初始化API Keys来加载新的Cookie
         try {
           const keyManager = require('../utils/keyManager');
-          console.log('子进程刷新Cookie完成，重新初始化主进程中的API Keys...');
+          logger.info('子进程刷新Cookie完成，重新初始化主进程中的API Keys...');
           keyManager.initializeApiKeys();
-          console.log('主进程API Keys重新加载完成');
+          logger.info('主进程API Keys重新加载完成');
         } catch (initError) {
-          console.error('重新初始化API Keys失败:', initError);
+          logger.error('重新初始化API Keys失败:', initError);
         }
       } else {
         refreshStatus.status = 'failed';
@@ -860,8 +875,9 @@ router.post("/refresh-cookies", async (req, res) => {
       message: '刷新请求已接受，正在后台处理'
     });
   } catch (error) {
-    console.error('触发刷新Cookie失败:', error);
 
+    logger.error('触发刷新Cookie失败:', error);
+    
     // 更新刷新状态
     refreshStatus.isRunning = false;
     refreshStatus.status = 'failed';
@@ -892,7 +908,7 @@ router.get("/refresh-status", (req, res) => {
       }
     });
   } catch (error) {
-    console.error('获取刷新状态失败:', error);
+    logger.error('获取刷新状态失败:', error);
     return res.status(500).json({
       success: false,
       message: `获取刷新状态失败: ${error.message}`
@@ -954,7 +970,7 @@ router.post('/generate-cookie-link', async (req, res) => {
       uuid: uuid
     });
   } catch (error) {
-    console.error('生成Cookie链接失败:', error);
+    logger.error('生成Cookie链接失败:', error);
     return res.status(500).json({
       success: false,
       message: error.message
@@ -1040,7 +1056,7 @@ router.get('/check-cookie-status', async (req, res) => {
         });
         
       } catch (error) {
-        console.error('查询Cursor API失败:', error);
+        logger.error('查询Cursor API失败:', error);
         // 发生错误但继续等待，不改变状态
         return res.json({
           success: false,
@@ -1071,11 +1087,65 @@ router.get('/check-cookie-status', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('检查Cookie状态失败:', error);
+    logger.error('检查Cookie状态失败:', error);
     return res.status(500).json({
       success: false,
       status: 'failed',
       message: error.message
+    });
+  }
+});
+
+// 获取日志API
+router.get("/logs", (req, res) => {
+  try {
+    // 获取查询参数
+    const level = req.query.level;
+    const search = req.query.search;
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 100;
+    const startTime = req.query.startTime;
+    const endTime = req.query.endTime;
+    
+    // 过滤参数
+    const filter = {
+      level,
+      search,
+      page,
+      pageSize,
+      startTime,
+      endTime
+    };
+    
+    // 获取日志
+    const logs = logger.getLogs(filter);
+    
+    return res.json({
+      success: true,
+      data: logs
+    });
+  } catch (error) {
+    logger.error('获取日志失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: `获取日志失败: ${error.message}`
+    });
+  }
+});
+
+// 清除内存日志
+router.delete("/logs", (req, res) => {
+  try {
+    logger.clearMemoryLogs();
+    return res.json({
+      success: true,
+      message: '日志已清除'
+    });
+  } catch (error) {
+    logger.error('清除日志失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: `清除日志失败: ${error.message}`
     });
   }
 });
@@ -1088,36 +1158,44 @@ function handleCursorError(errorStr, bearerToken, originalAuthToken) {
   if (errorStr.includes('Not logged in')) {
     // 更明确的错误日志
     if (originalAuthToken === bearerToken) {
-      console.error(`检测到API Key "${bearerToken}" 中没有可用Cookie，正在尝试以向后兼容模式使用API Key本身`);
+      logger.error(`检测到API Key "${bearerToken}" 中没有可用Cookie，正在尝试以向后兼容模式使用API Key本身`);
       message = `错误：API Key "${bearerToken}" 中没有可用的Cookie。请添加有效的Cookie到此API Key，或使用其他有效的API Key。\n\n详细信息：${errorStr}`;
     } else {
-      console.error('检测到无效cookie:', originalAuthToken);
+      logger.error('检测到无效cookie:', originalAuthToken);
       message = `错误：Cookie无效或已过期，请更新Cookie。\n\n详细信息：${errorStr}`;
     }
     shouldRemoveCookie = true;
-  } else if (errorStr.includes('You\'ve reached your trial request limit')) {
-    console.error('检测到额度用尽cookie:', originalAuthToken);
+  } else if (errorStr.includes('You\'ve reached your trial request limit') || errorStr.includes('You\'ve reached the usage limit for free usage')) {
+    logger.error('检测到额度用尽cookie:', originalAuthToken);
     message = `错误：Cookie使用额度已用完，请更换Cookie或等待刷新。\n\n详细信息：${errorStr}`;
     shouldRemoveCookie = true;
   } else if (errorStr.includes('User is unauthorized')) {
-    console.error('检测到未授权cookie:', originalAuthToken);
+    logger.error('检测到未授权cookie:', originalAuthToken);
     message = `错误：Cookie已被封禁或失效，请更换Cookie。\n\n详细信息：${errorStr}`;
     shouldRemoveCookie = true;
   } else if (errorStr.includes('suspicious activity checks')) {
-    console.error('检测到IP黑名单:', originalAuthToken);
+    logger.error('检测到IP黑名单:', originalAuthToken);
     message = `错误：IP可能被列入黑名单，请尝试更换网络环境或使用代理。\n\n详细信息：${errorStr}`;
     shouldRemoveCookie = false;
   } else if (errorStr.includes('Too many computers')) {
-    console.error('检测到账户暂时被封禁:', originalAuthToken);
+    logger.error('检测到账户暂时被封禁:', originalAuthToken);
     message = `错误：账户因在多台设备登录而暂时被封禁，请稍后再试或更换账户。\n\n详细信息：${errorStr}`;
     shouldRemoveCookie = true;
   } else if (errorStr.includes('Login expired') || errorStr.includes('login expired')) {
-    console.error('检测到登录过期cookie:', originalAuthToken);
+    logger.error('检测到登录过期cookie:', originalAuthToken);
     message = `错误：Cookie登录已过期，请更新Cookie。\n\n详细信息：${errorStr}`;
+    shouldRemoveCookie = true;
+  } else if(errorStr.includes('your request has been blocked due to the use of a temporary email service for this account')) {
+    logger.error('检测到临时邮箱:', originalAuthToken);
+    message = `错误：请求被阻止，检测到临时邮箱服务，请更换邮箱。\n\n详细信息：${errorStr}`;
+    shouldRemoveCookie = true;
+  } else if (errorStr.includes('Your request has been blocked as our system has detected suspicious activity from your account')) {
+    logger.error('检测到账户异常:', originalAuthToken);
+    message = `错误：请求被阻止，账号被ban，请更换账号。\n\n详细信息：${errorStr}`;
     shouldRemoveCookie = true;
   } else {
     // 非Cookie相关错误
-    console.error('检测到其他错误:', errorStr);
+    logger.error('检测到其他错误:', errorStr);
     message = `错误：请求失败。\n\n详细信息：${errorStr}`;
     shouldRemoveCookie = false;
   }

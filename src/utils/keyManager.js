@@ -1,6 +1,7 @@
 const config = require('../config/config');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 // 定义无效cookie的存储文件路径
 const INVALID_COOKIES_FILE = path.join(__dirname, '../../data/invalid_cookies.json');
@@ -13,9 +14,9 @@ function ensureDataDirExists() {
   if (!fs.existsSync(dataDir)) {
     try {
       fs.mkdirSync(dataDir, { recursive: true });
-      console.log('创建data目录成功');
+      logger.info(`创建data目录: ${dataDir}`);
     } catch (err) {
-      console.error('创建data目录失败:', err);
+      logger.error('创建data目录失败:', err);
     }
   }
 }
@@ -42,12 +43,12 @@ function loadInvalidCookiesFromFile() {
       invalidCookies.clear();
       cookiesArray.forEach(cookie => invalidCookies.add(cookie));
       
-      console.log(`从文件加载了 ${cookiesArray.length} 个无效cookie`);
+      logger.info(`从文件加载了 ${cookiesArray.length} 个无效cookie`);
     } else {
       saveInvalidCookiesToFile(); // 如果文件不存在，创建新文件
     }
   } catch (err) {
-    console.error('加载无效cookie文件失败:', err);
+    logger.error('加载无效cookie文件失败:', err);
     saveInvalidCookiesToFile(); // 如果加载失败，尝试创建新文件
   }
 }
@@ -59,9 +60,9 @@ function saveInvalidCookiesToFile() {
   try {
     const cookiesArray = Array.from(invalidCookies);
     fs.writeFileSync(INVALID_COOKIES_FILE, JSON.stringify(cookiesArray, null, 2), 'utf8');
-    console.log(`已将 ${cookiesArray.length} 个无效cookie保存到文件`);
+    logger.info(`已将 ${cookiesArray.length} 个无效cookie保存到文件`);
   } catch (err) {
-    console.error('保存无效cookie文件失败:', err);
+    logger.error('保存无效cookie文件失败:', err);
   }
 }
 
@@ -88,19 +89,19 @@ function loadApiKeysFromFile() {
           rotationIndexes.set(apiKey, 0);
           totalCookies += cookies.length;
         } else {
-          console.error(`API Key ${apiKey} 的cookies不是数组，跳过`);
+          logger.error(`API Key ${apiKey} 的cookies不是数组，跳过`);
         }
       }
       
       const apiKeyCount = Object.keys(apiKeysObj).length;
-      console.log(`从文件加载了 ${apiKeyCount} 个API Key，共 ${totalCookies} 个Cookie`);
+      logger.info(`从文件加载了 ${apiKeyCount} 个API Key，共 ${totalCookies} 个Cookie`);
       return apiKeyCount > 0;
     } else {
-      console.log('API Keys文件不存在，将使用配置中的API Keys');
+      logger.info('API Keys文件不存在，将使用配置中的API Keys');
       return false;
     }
   } catch (err) {
-    console.error('加载API Keys文件失败:', err);
+    logger.error('加载API Keys文件失败:', err);
     return false;
   }
 }
@@ -119,18 +120,18 @@ function saveApiKeysToFile() {
     // 使用JSON.stringify时避免特殊字符处理问题
     const jsonString = JSON.stringify(apiKeysObj, null, 2);
     fs.writeFileSync(API_KEYS_FILE, jsonString, 'utf8');
-    console.log(`已将 ${Object.keys(apiKeysObj).length} 个API Key保存到文件`);
+    logger.info(`已将 ${Object.keys(apiKeysObj).length} 个API Key保存到文件`);
     
     // 简化验证过程
     try {
       const savedContent = fs.readFileSync(API_KEYS_FILE, 'utf8');
       JSON.parse(savedContent); // 只验证JSON格式是否正确
-      console.log('验证通过: 所有cookie都被完整保存');
+      logger.info('验证通过: 所有cookie都被完整保存');
     } catch (verifyErr) {
-      console.error('验证保存内容时出错:', verifyErr);
+      logger.error('验证保存内容时出错:', verifyErr);
     }
   } catch (err) {
-    console.error('保存API Keys文件失败:', err);
+    logger.error('保存API Keys文件失败:', err);
   }
 }
 
@@ -144,7 +145,7 @@ function initializeApiKeys() {
     const hasEnvApiKeys = Object.keys(configApiKeys).length > 0;
     
     if (hasEnvApiKeys) {
-        console.log('从环境变量检测到API Keys配置，将合并到现有配置...');
+        logger.info('从环境变量检测到API Keys配置，将合并到现有配置...');
         
         // 记录合并前的Cookie数量
         let beforeMergeCookies = 0;
@@ -188,12 +189,12 @@ function initializeApiKeys() {
             afterMergeCookies += cookies.length;
         }
         
-        console.log(`合并前共有 ${beforeMergeCookies} 个Cookie，合并后共有 ${afterMergeCookies} 个Cookie`);
+        logger.info(`合并前共有 ${beforeMergeCookies} 个Cookie，合并后共有 ${afterMergeCookies} 个Cookie`);
         
         // 保存合并后的结果到文件
         saveApiKeysToFile();
     } else if (!loadedFromFile) {
-        console.log('警告: 未能从文件加载API Keys，且环境变量中也没有配置API Keys');
+        logger.warn('警告: 未能从文件加载API Keys，且环境变量中也没有配置API Keys');
     }
     
     // 统计API Keys和Cookies数量
@@ -202,13 +203,13 @@ function initializeApiKeys() {
         totalCookies += cookies.length;
     }
     
-    console.log(`API Keys初始化完成，共有 ${apiKeyMap.size} 个API Key，${totalCookies} 个Cookie`);
+    logger.info(`API Keys初始化完成，共有 ${apiKeyMap.size} 个API Key，${totalCookies} 个Cookie`);
     
     // 加载无效cookie
     loadInvalidCookiesFromFile();
     
     // 从API Key中移除已知的无效cookie
-    console.log('开始从API Keys中移除无效cookie...');
+    logger.info('开始从API Keys中移除无效cookie...');
     removeInvalidCookiesFromApiKeys();
 }
 
@@ -230,11 +231,11 @@ function removeInvalidCookiesFromApiKeys() {
             apiKeyMap.set(apiKey, filteredCookies);
             rotationIndexes.set(apiKey, 0);
             
-            console.log(`从API Key ${apiKey} 中移除了 ${removedCount} 个无效cookie，剩余 ${filteredCookies.length} 个`);
+            logger.info(`从API Key ${apiKey} 中移除了 ${removedCount} 个无效cookie，剩余 ${filteredCookies.length} 个`);
         }
     }
     
-    console.log(`总共从API Keys中移除了 ${totalRemoved} 个无效cookie`);
+    logger.info(`总共从API Keys中移除了 ${totalRemoved} 个无效cookie`);
     
     // 如果有cookie被移除，保存更新后的API Keys
     if (totalRemoved > 0) {
@@ -252,7 +253,7 @@ function addOrUpdateApiKey(apiKey, cookieValues) {
     const validCookies = cookieValues.filter(cookie => !invalidCookies.has(cookie));
     
     if (validCookies.length < cookieValues.length) {
-        console.log(`API Key ${apiKey} 中有 ${cookieValues.length - validCookies.length} 个无效cookie被过滤`);
+        logger.info(`API Key ${apiKey} 中有 ${cookieValues.length - validCookies.length} 个无效cookie被过滤`);
     }
     
     apiKeyMap.set(apiKey, validCookies);
@@ -321,7 +322,7 @@ function getAllCookiesForApiKey(apiKey) {
 // 从API key的cookie列表中移除特定cookie
 function removeCookieFromApiKey(apiKey, cookieToRemove) {
     if (!apiKeyMap.has(apiKey)) {
-        console.log(`API Key ${apiKey} 不存在，无法移除cookie`);
+        logger.info(`API Key ${apiKey} 不存在，无法移除cookie`);
         return false;
     }
     
@@ -330,7 +331,7 @@ function removeCookieFromApiKey(apiKey, cookieToRemove) {
     
     // 检查是否尝试移除与API Key相同的值（可能是向后兼容模式）
     if (cookieToRemove === apiKey && initialLength === 0) {
-        console.log(`API Key ${apiKey} 中没有任何cookie，系统正在尝试以向后兼容模式使用API Key本身`);
+        logger.info(`API Key ${apiKey} 中没有任何cookie，系统正在尝试以向后兼容模式使用API Key本身`);
         return false;
     }
     
@@ -339,7 +340,7 @@ function removeCookieFromApiKey(apiKey, cookieToRemove) {
     
     // 如果长度没变，说明没有找到要移除的cookie
     if (filteredCookies.length === initialLength) {
-        console.log(`未找到要移除的cookie: ${cookieToRemove}`);
+        logger.info(`未找到要移除的cookie: ${cookieToRemove}`);
         return false;
     }
     
@@ -358,8 +359,8 @@ function removeCookieFromApiKey(apiKey, cookieToRemove) {
     // 保存更新后的API Keys
     saveApiKeysToFile();
     
-    console.log(`已从API Key ${apiKey} 中移除cookie: ${cookieToRemove}`);
-    console.log(`剩余cookie数量: ${filteredCookies.length}`);
+    logger.info(`已从API Key ${apiKey} 中移除cookie: ${cookieToRemove}`);
+    logger.info(`剩余cookie数量: ${filteredCookies.length}`);
     
     return true;
 }

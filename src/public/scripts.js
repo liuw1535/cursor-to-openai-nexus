@@ -28,6 +28,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 绑定事件监听器
     bindEventListeners();
+
+    // 处理日志按钮点击事件
+    document.getElementById('logsBtn')?.addEventListener('click', function() {
+        window.location.href = '/logs.html';
+    });
 });
 
 // 绑定各种事件监听器
@@ -154,10 +159,10 @@ async function handleAddKeyForm(e) {
             document.getElementById('addKeyMessage').innerHTML = `
                 <div class="info">API Key 添加/更新成功</div>
             `;
-            document.getElementById('apiKey').value = '';
-            document.getElementById('cookieValues').value = '';
-            renderAddCookieTags([]);
-            loadApiKeys();
+            // 等待3秒后再刷新页面
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
         } else {
             document.getElementById('addKeyMessage').innerHTML = `
                 <div class="error">API Key 添加/更新失败: ${data.error}</div>
@@ -1128,7 +1133,8 @@ function addAuthHeader(headers = {}) {
             url.includes('/v1/invalid-cookies') || 
             url.includes('/v1/refresh-cookies') ||
             url.includes('/v1/generate-cookie-link') ||
-            url.includes('/v1/check-cookie-status')) {
+            url.includes('/v1/check-cookie-status') ||
+            url.includes('/v1/logs')) {
             options.headers = addAuthHeader(options.headers);
         }
         return originalFetch(url, options);

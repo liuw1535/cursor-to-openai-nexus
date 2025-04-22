@@ -264,3 +264,85 @@ print(response.content)
 
 - 本项目基于[cursor-api](https://github.com/zhx47/cursor-api)(by zhx47)
 - 整合了[cursor-api](https://github.com/lvguanjun/cursor-api)(by lvguanjun)的提交内容
+
+# 日志系统
+
+项目集成了统一的日志系统，可以通过以下方式配置：
+
+## 日志级别配置
+
+1. 在 `.env` 文件中设置环境变量
+   ```
+   LOG_LEVEL=INFO
+   LOG_FORMAT=colored
+   LOG_TO_FILE=true
+   LOG_MAX_SIZE=10
+   LOG_MAX_FILES=10
+   ```
+2. 在启动命令中指定环境变量，例如：`LOG_LEVEL=DEBUG npm start`
+
+支持的日志级别有：
+- ERROR：只显示错误信息
+- WARN：显示警告和错误信息
+- INFO：显示一般信息、警告和错误信息（默认）
+- DEBUG：显示调试信息、一般信息、警告和错误信息
+- TRACE：显示所有日志信息
+
+## 日志格式
+
+日志格式为：`[级别] 时间戳 日志内容`，不同级别使用不同颜色显示，方便区分：
+- ERROR：红色
+- WARN：黄色
+- INFO：绿色
+- DEBUG：蓝色
+- TRACE：青色
+- HTTP：青色（专用于HTTP请求日志）
+
+## HTTP请求日志
+
+项目使用 Morgan 中间件记录 HTTP 请求，并集成到统一日志系统中：
+
+1. 在 `.env` 文件中设置 HTTP 日志格式：
+   ```
+   # 选项: tiny, combined, common, dev, short
+   MORGAN_FORMAT=tiny
+   ```
+
+2. HTTP 日志会以 `[HTTP]` 前缀显示，使用青色高亮，便于识别
+
+3. Morgan 格式选项说明：
+   - `tiny`: 最简洁的格式，仅包含方法、URL、状态码、响应时间
+   - `combined`: 标准的 Apache 组合日志格式，包含 IP、时间、请求、状态码、响应大小、referrer、user-agent
+   - `common`: 标准的 Apache 通用日志格式，类似 combined 但不包含 referrer 和 user-agent
+   - `dev`: 开发友好的彩色格式，包含方法、URL、状态码(带颜色)、响应时间
+   - `short`: 更短的格式，包含方法、URL、状态码、响应时间、响应大小
+
+## 文件日志
+
+项目支持将日志同时输出到控制台和文件，可以通过以下配置启用：
+
+1. 在 `.env` 文件中设置：`LOG_TO_FILE=true`
+2. 可选配置:
+   - `LOG_MAX_SIZE`: 日志文件最大大小，单位MB，默认10MB
+   - `LOG_MAX_FILES`: 保留的历史日志文件数量，默认10个
+
+日志文件存储在项目根目录的 `logs` 文件夹下:
+- 当前日志文件: `app.log`
+- 历史日志文件: `app-2023-05-05T12-45-30-000Z.log`
+
+文件日志会自动轮转，当日志文件大小超过设定值时，会创建新的日志文件并保留最近的N个文件。
+
+## 代码中使用
+
+在代码中可以按需使用不同级别的日志：
+
+```javascript
+const logger = require('./utils/logger');
+
+logger.error('这是错误信息');
+logger.warn('这是警告信息');
+logger.info('这是一般信息');
+logger.debug('这是调试信息');
+logger.trace('这是跟踪信息');
+logger.http('这是HTTP请求日志');
+```

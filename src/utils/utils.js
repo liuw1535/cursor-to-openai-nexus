@@ -97,6 +97,7 @@ function generateCursorBody(messages, modelName) {
 function chunkToUtf8String(chunk) {
   const results = []
   const errorResults = { hasError: false, errorMessage: '' }
+  let isThinking = false;
   const buffer = Buffer.from(chunk, 'hex');
   //console.log("Chunk buffer:", buffer.toString('hex'))
 
@@ -111,17 +112,14 @@ function chunkToUtf8String(chunk) {
         const gunzipData = magicNumber == 0 ? data : zlib.gunzipSync(data)
         const response = $root.StreamUnifiedChatWithToolsResponse.decode(gunzipData);
         const thinking = response?.message?.thinking?.content
-        if (thinking !== undefined){
+        if (thinking !== undefined && thinking.length > 0){
             results.push(thinking);
-            //console.log(thinking);
+            isThinking = true;
         }
-
         const content = response?.message?.content
-        if (content !== undefined){
+        if (content !== undefined && content.length > 0){
           results.push(content)
-          //console.log(content)
         }
-        
       }
       else if (magicNumber == 2 || magicNumber == 3) { 
         // Json message
@@ -156,7 +154,7 @@ function chunkToUtf8String(chunk) {
     return { error: errorResults.errorMessage };
   }
 
-  return results.join('')
+  return {isThink: isThinking, content: results.join('')};
 }
 
 function generateHashed64Hex(input, salt = '') {

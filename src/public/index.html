@@ -12,8 +12,9 @@
             <h1>Cursor To OpenAI - API Key 管理</h1>
             <p>在此页面上，您可以管理自定义 API Key 与 Cursor Cookie 的映射关系。</p>
             <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                <div>
-                <button id="clearCacheBtn" style="background-color: rgba(255,255,255,0.2);">清除缓存并刷新</button>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <button id="clearCacheBtn" style="background-color: rgba(255,255,255,0.2);">清除缓存并刷新</button>
+                    <button id="logsBtn" style="background-color: rgba(255,255,255,0.2);">查看系统日志</button>
                 </div>
                 <div>
                     <span id="adminUsername" style="margin-right: 10px; color: white;"></span>
@@ -74,14 +75,97 @@
                 <li>添加自定义 API Key 和对应的 Cursor Cookie 值。</li>
                 <li>API Key 可以不添加 Cookie，但不会有任何功能，可以后续再添加 Cookie。</li>
                 <li>使用自定义 API Key 作为 OpenAI API 的认证凭证。</li>
-                <li>系统将自动在多个 Cookie 之间进行轮询。</li>
-                <li>API 端点：
+                <li>系统将自动在多个 Cookie 之间进行轮询。
                     <ul>
                         <li>模型列表：<code>/v1/models</code></li>
                         <li>聊天补全：<code>/v1/chat/completions</code></li>
                     </ul>
                 </li>
             </ol>
+        </div>
+
+        <div class="card">
+            <h2>无效Cookie管理</h2>
+            <div class="form-group">
+                <div class="info">
+                    以下是系统自动检测到的无效Cookie列表。这些Cookie在请求过程中被发现无效，已被自动从API Key中移除。
+                </div>
+                <div id="invalidCookiesContainer">
+                    <div style="text-align: center; padding: 20px;">
+                        <div>加载中...</div>
+                    </div>
+                </div>
+                <button id="clearAllInvalidCookies" style="background: #e74c3c;">清除所有无效Cookie</button>
+            </div>
+        </div>
+
+        <!-- 新增：Cookie刷新功能 -->
+        <div class="card" style="border: 2px dashed #e74c3c; position: relative;">
+            <div style="position: absolute; top: -10px; right: -10px; background: #e74c3c; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold;">不建议使用</div>
+            <h2>Cookie自动刷新 <span style="color: #e74c3c; font-size: 0.8em;">(不建议使用)</span></h2>
+            <div class="form-group">
+                <div class="info" style="color: #e74c3c;">
+                    <strong>警告：</strong>此功能已标记为不建议使用，可能会导致账号风险。除非必要，请避免使用此功能。
+                </div>
+                <div class="info" style="margin-top: 10px;">
+                    系统支持自动刷新Cookie，确保API Key始终有足够的可用Cookie。您可以在此手动触发刷新操作。
+                </div>
+                <div id="refreshCookieMessage"></div>
+                <div style="margin-top: 15px;">
+                    <div class="form-group">
+                        <label for="refreshApiKey">选择要刷新的API Key（不选则刷新所有）</label>
+                        <select id="refreshApiKey" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
+                            <option value="">所有API Key</option>
+                            <!-- 选项将通过JavaScript动态加载 -->
+                        </select>
+                    </div>
+                    <button id="refreshCookieBtn" style="background: #27ae60;">刷新Cookie</button>
+                </div>
+                <div id="refreshStatusContainer" style="margin-top: 15px; display: none;">
+                    <div class="info">
+                        <div>刷新状态：<span id="refreshStatus">准备中...</span></div>
+                        <div style="margin-top: 10px;">
+                            <progress id="refreshProgress" value="0" max="100" style="width: 100%;"></progress>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增：获取Cursor Cookie功能 -->
+        <div class="card">
+            <h2>获取Cursor Cookie</h2>
+            <div class="form-group">
+                <div class="info">
+                    通过此功能可以快速获取新的Cursor Cookie并添加到系统中。点击按钮生成链接，完成登录后自动添加Cookie。系统将等待最多5分钟获取Cookie。
+                </div>
+                <div id="getCookieMessage"></div>
+                <div style="margin-top: 15px;">
+                    <div class="form-group">
+                        <label for="targetApiKey">选择要添加Cookie的API Key（不选则添加到所有）</label>
+                        <select id="targetApiKey" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
+                            <option value="">所有API Key</option>
+                            <!-- 选项将通过JavaScript动态加载 -->
+                        </select>
+                    </div>
+                    <button id="generateLinkBtn" style="background: #2980b9;">生成登录链接</button>
+                </div>
+                <div id="loginLinkContainer" style="margin-top: 15px; display: none;">
+                    <div class="info">
+                        <p>请点击下面的链接或复制到浏览器打开，然后登录Cursor账号并授权：</p>
+                        <div style="margin: 10px 0; word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 4px;">
+                            <a id="loginLink" href="#" target="_blank"></a>
+                        </div>
+                        <p>登录完成后系统将自动获取Cookie并添加到API Key中。请等待最多5分钟，期间请勿关闭此页面。</p>
+                    </div>
+                    <div id="pollStatus" style="margin-top: 10px;">
+                        <div>状态：<span id="pollStatusText">等待用户登录...</span></div>
+                        <div style="margin-top: 10px;">
+                            <progress id="pollProgress" value="0" max="100" style="width: 100%;"></progress>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -110,94 +194,6 @@
                 <button type="submit">保存修改</button>
             </form>
         </div>
-    </div>
-
-    <div class="card">
-        <h2>无效Cookie管理</h2>
-        <div class="form-group">
-            <div class="info">
-                以下是系统自动检测到的无效Cookie列表。这些Cookie在请求过程中被发现无效，已被自动从API Key中移除。
-            </div>
-            <div id="invalidCookiesContainer">
-                <div style="text-align: center; padding: 20px;">
-                    <div>加载中...</div>
-                </div>
-            </div>
-            <button id="clearAllInvalidCookies" style="background: #e74c3c;">清除所有无效Cookie</button>
-        </div>
-    </div>
-
-    <!-- 新增：Cookie刷新功能 -->
-    <div class="card" style="border: 2px dashed #e74c3c; position: relative;">
-        <div style="position: absolute; top: -10px; right: -10px; background: #e74c3c; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold;">不建议使用</div>
-        <h2>Cookie自动刷新 <span style="color: #e74c3c; font-size: 0.8em;">(不建议使用)</span></h2>
-        <div class="form-group">
-            <div class="info" style="color: #e74c3c;">
-                <strong>警告：</strong>此功能已标记为不建议使用，可能会导致账号风险。除非必要，请避免使用此功能。
-            </div>
-            <div class="info" style="margin-top: 10px;">
-                系统支持自动刷新Cookie，确保API Key始终有足够的可用Cookie。您可以在此手动触发刷新操作。
-            </div>
-            <div id="refreshCookieMessage"></div>
-            <div style="margin-top: 15px;">
-                <div class="form-group">
-                    <label for="refreshApiKey">选择要刷新的API Key（不选则刷新所有）</label>
-                    <select id="refreshApiKey" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
-                        <option value="">所有API Key</option>
-                        <!-- 选项将通过JavaScript动态加载 -->
-                    </select>
-                </div>
-                <button id="refreshCookieBtn" style="background: #27ae60;">刷新Cookie</button>
-            </div>
-            <div id="refreshStatusContainer" style="margin-top: 15px; display: none;">
-                <div class="info">
-                    <div>刷新状态：<span id="refreshStatus">准备中...</span></div>
-                    <div style="margin-top: 10px;">
-                        <progress id="refreshProgress" value="0" max="100" style="width: 100%;"></progress>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 新增：获取Cursor Cookie功能 -->
-    <div class="card">
-        <h2>获取Cursor Cookie</h2>
-        <div class="form-group">
-            <div class="info">
-                通过此功能可以快速获取新的Cursor Cookie并添加到系统中。点击按钮生成链接，完成登录后自动添加Cookie。系统将等待最多5分钟获取Cookie。
-            </div>
-            <div id="getCookieMessage"></div>
-            <div style="margin-top: 15px;">
-                <div class="form-group">
-                    <label for="targetApiKey">选择要添加Cookie的API Key（不选则添加到所有）</label>
-                    <select id="targetApiKey" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
-                        <option value="">所有API Key</option>
-                        <!-- 选项将通过JavaScript动态加载 -->
-                    </select>
-                </div>
-                <button id="generateLinkBtn" style="background: #2980b9;">生成登录链接</button>
-            </div>
-            <div id="loginLinkContainer" style="margin-top: 15px; display: none;">
-                <div class="info">
-                    <p>请点击下面的链接或复制到浏览器打开，然后登录Cursor账号并授权：</p>
-                    <div style="margin: 10px 0; word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 4px;">
-                        <a id="loginLink" href="#" target="_blank"></a>
-                    </div>
-                    <p>登录完成后系统将自动获取Cookie并添加到API Key中。请等待最多5分钟，期间请勿关闭此页面。</p>
-                </div>
-                <div id="pollStatus" style="margin-top: 10px;">
-                    <div>状态：<span id="pollStatusText">等待用户登录...</span></div>
-                    <div style="margin-top: 10px;">
-                        <progress id="pollProgress" value="0" max="100" style="width: 100%;"></progress>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="sticky-actions">
-        <button id="clearCacheBtn" style="background-color: rgba(255,255,255,0.2);">清除缓存并刷新</button>
     </div>
 
     <script src="scripts.js"></script>

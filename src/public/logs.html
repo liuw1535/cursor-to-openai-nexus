@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cursor To OpenAI - 日志查看</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .log-table th, .log-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .log-table tr:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .log-level {
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .log-level-ERROR {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .log-level-WARN {
+            background-color: #f39c12;
+            color: white;
+        }
+        .log-level-INFO {
+            background-color: #27ae60;
+            color: white;
+        }
+        .log-level-DEBUG {
+            background-color: #3498db;
+            color: white;
+        }
+        .log-level-TRACE {
+            background-color: #9b59b6;
+            color: white;
+        }
+        .log-level-HTTP {
+            background-color: #1abc9c;
+            color: white;
+        }
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .filter-group {
+                flex-basis: 100%;
+                min-width: auto;
+            }
+            
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .pagination button {
+            padding: 5px 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: 80px;
+            min-height: 36px;  /* 增加触摸区域 */
+        }
+        .pagination button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .pagination-info {
+            margin-right: 15px;
+            align-self: center;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        @media (min-width: 768px) {
+            .pagination-info {
+                width: auto;
+                margin-bottom: 0;
+                text-align: left;
+            }
+        }
+        .level-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .level-checkbox {
+            display: none;
+        }
+        .level-label {
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+            /* 增加触摸区域 */
+            min-height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .level-checkbox:checked + .level-label {
+            opacity: 1;
+            outline: 2px solid white;
+        }
+        .search-box {
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 8px;
+            padding-right: 40px; /* 增加右侧空间给搜索按钮 */
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px; /* 避免iOS自动缩放 */
+            min-height: 44px; /* 增加触摸区域 */
+            -webkit-appearance: none; /* 移除iOS默认样式 */
+            appearance: none;
+        }
+        .search-box button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #555;
+            padding: 10px; /* 增加触摸区域 */
+            font-size: 18px; /* 增大搜索图标 */
+        }
+        .date-picker {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px; /* 避免iOS自动缩放 */
+            min-height: 44px; /* 增加触摸区域 */
+            -webkit-appearance: none; /* 移除iOS默认样式 */
+            appearance: none;
+        }
+        /* 为安卓设备特殊优化日期选择器 */
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            width: 20px;
+            height: 20px;
+            padding: 5px;
+        }
+        /* 按钮样式优化 */
+        button {
+            min-height: 44px; /* 增加触摸区域 */
+            font-size: 16px; /* 移动端更容易点击的字体大小 */
+        }
+        /* 表格在移动端的特殊处理 */
+        @media (max-width: 480px) {
+            .log-table th:nth-child(1), 
+            .log-table td:nth-child(1) {
+                min-width: 120px;
+            }
+            .log-table th:nth-child(2), 
+            .log-table td:nth-child(2) {
+                min-width: 80px;
+            }
+        }
+        /* 开关样式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+        
+        input:checked + .slider {
+            background-color: #27ae60;
+        }
+        
+        input:focus + .slider {
+            box-shadow: 0 0 1px #27ae60;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .slider.round {
+            border-radius: 24px;
+        }
+        
+        .slider.round:before {
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card header-card">
+            <h1>Cursor To OpenAI - 日志查看</h1>
+            <p>在此页面上，您可以查看和筛选系统日志。</p>
+            <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <button id="clearCacheBtn" style="background-color: rgba(255,255,255,0.2);">清除缓存并刷新</button>
+                    <button id="backBtn" style="background-color: rgba(255,255,255,0.2);">返回主页</button>
+                </div>
+                <div>
+                    <span id="adminUsername" style="margin-right: 10px; color: white;"></span>
+                    <button id="logoutBtn" style="background: rgba(231, 76, 60, 0.8);">退出登录</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>日志筛选</h2>
+            <div class="filter-container">
+                <div class="filter-group">
+                    <label>日志级别</label>
+                    <div class="level-filter">
+                        <input type="radio" name="level-filter" id="level-all" class="level-checkbox" value="ALL" checked>
+                        <label for="level-all" class="level-label" style="background-color: #7f8c8d; color: white;">全部</label>
+                        
+                        <input type="radio" name="level-filter" id="level-error" class="level-checkbox" value="ERROR">
+                        <label for="level-error" class="level-label log-level-ERROR">错误</label>
+                        
+                        <input type="radio" name="level-filter" id="level-warn" class="level-checkbox" value="WARN">
+                        <label for="level-warn" class="level-label log-level-WARN">警告</label>
+                        
+                        <input type="radio" name="level-filter" id="level-info" class="level-checkbox" value="INFO">
+                        <label for="level-info" class="level-label log-level-INFO">信息</label>
+                        
+                        <input type="radio" name="level-filter" id="level-http" class="level-checkbox" value="HTTP">
+                        <label for="level-http" class="level-label log-level-HTTP">HTTP</label>
+                        
+                        <input type="radio" name="level-filter" id="level-debug" class="level-checkbox" value="DEBUG">
+                        <label for="level-debug" class="level-label log-level-DEBUG">调试</label>
+                        
+                        <input type="radio" name="level-filter" id="level-trace" class="level-checkbox" value="TRACE">
+                        <label for="level-trace" class="level-label log-level-TRACE">跟踪</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label for="search">搜索</label>
+                    <div class="search-box">
+                        <input type="text" id="search" placeholder="搜索日志内容..." autocomplete="off">
+                        <button id="searchBtn" aria-label="搜索">🔍</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label for="startTime">开始时间</label>
+                    <input type="datetime-local" id="startTime" class="date-picker" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}">
+                </div>
+                <div class="filter-group">
+                    <label for="endTime">结束时间</label>
+                    <input type="datetime-local" id="endTime" class="date-picker" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}">
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button id="filterBtn" style="flex: 1; padding: 8px; background-color: #3498db;">应用筛选</button>
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button id="clearLogsBtn" style="flex: 1; padding: 8px; background-color: #e74c3c;">清空日志</button>
+                </div>
+                <div class="filter-group">
+                    <label for="hideCommonLogs">屏蔽常见请求</label>
+                    <div style="display: flex; align-items: center; margin-top: 8px;">
+                        <label class="switch" style="margin-right: 10px;">
+                            <input type="checkbox" id="hideCommonLogs" checked>
+                            <span class="slider round"></span>
+                        </label>
+                        <span id="hideStatus">已开启</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>日志列表</h2>
+            <div id="logsContainer">
+                <div class="table-responsive">
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 200px;">时间</th>
+                                <th style="width: 100px;">级别</th>
+                                <th>内容</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsList">
+                            <!-- 日志数据将通过JavaScript动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <span class="pagination-info">显示 <span id="currentRange">0-0</span> / <span id="totalLogs">0</span> 条日志</span>
+                    <button id="prevPage" disabled>上一页</button>
+                    <button id="nextPage" disabled>下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentPage = 1;
+        const pageSize = 12;
+        let totalLogs = 0;
+        let token = localStorage.getItem('adminToken');
+        let selectedLevels = []; // 默认为空数组，表示不筛选日志级别
+        let hideCommonLogs = true; // 默认屏蔽常见请求日志
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查登录状态
+            checkAuthStatus();
+            
+            // 加载日志数据
+            loadLogs();
+            
+            // 屏蔽常见请求开关
+            const hideCommonLogsCheckbox = document.getElementById('hideCommonLogs');
+            const hideStatus = document.getElementById('hideStatus');
+            
+            hideCommonLogsCheckbox.addEventListener('change', function() {
+                hideCommonLogs = this.checked;
+                hideStatus.textContent = hideCommonLogs ? '已开启' : '已关闭';
+                loadLogs();
+            });
+            
+            // 返回主页
+            document.getElementById('backBtn').addEventListener('click', function() {
+                window.location.href = '/';
+            });
+            
+            // 清除缓存并刷新
+            document.getElementById('clearCacheBtn').addEventListener('click', function() {
+                localStorage.removeItem('logs');
+                window.location.reload();
+            });
+            
+            // 退出登录
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                localStorage.removeItem('adminToken');
+                window.location.href = '/login.html';
+            });
+            
+            // 筛选按钮
+            document.getElementById('filterBtn').addEventListener('click', function() {
+                currentPage = 1;
+                loadLogs();
+            });
+            
+            // 清空日志按钮
+            document.getElementById('clearLogsBtn').addEventListener('click', function() {
+                if (confirm('确定要清空所有日志吗？此操作不可撤销。')) {
+                    clearLogs();
+                }
+            });
+            
+            // 上一页
+            document.getElementById('prevPage').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadLogs();
+                }
+            });
+            
+            // 下一页
+            document.getElementById('nextPage').addEventListener('click', function() {
+                if (currentPage * pageSize < totalLogs) {
+                    currentPage++;
+                    loadLogs();
+                }
+            });
+            
+            // 搜索按钮
+            document.getElementById('searchBtn').addEventListener('click', function() {
+                currentPage = 1;
+                loadLogs();
+            });
+            
+            // 搜索框回车
+            document.getElementById('search').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    currentPage = 1;
+                    loadLogs();
+                }
+            });
+
+            // 日志级别筛选
+            document.querySelectorAll('.level-checkbox').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // 更新选中的日志级别
+                    if (this.value === 'ALL') {
+                        selectedLevels = [];
+                    } else {
+                        selectedLevels = [this.value];
+                    }
+                });
+            });
+            
+            // 修复Android日期选择器问题
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            if (isAndroid) {
+                // 为Android设备添加特殊处理
+                const dateInputs = document.querySelectorAll('input[type="datetime-local"]');
+                dateInputs.forEach(input => {
+                    // 监听焦点事件，确保日期选择器在Android上正常工作
+                    input.addEventListener('focus', function() {
+                        this.click(); // 确保日期选择器弹出
+                    });
+                    
+                    // 监听输入变化，处理可能的格式问题
+                    input.addEventListener('change', function() {
+                        if (this.value) {
+                            // 确保日期格式有效
+                            try {
+                                const date = new Date(this.value);
+                                if (!isNaN(date.getTime())) {
+                                    // 格式有效，无需处理
+                                } else {
+                                    // 格式无效，清空输入
+                                    this.value = '';
+                                }
+                            } catch (e) {
+                                // 出错时清空输入
+                                this.value = '';
+                            }
+                        }
+                    });
+                });
+            }
+        });
+
+        // 检查登录状态
+        function checkAuthStatus() {
+            const token = localStorage.getItem('adminToken');
+            
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // 验证token
+            fetch('/v1/admin/verify', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    localStorage.removeItem('adminToken');
+                    window.location.href = '/login.html';
+                } else {
+                    // 显示管理员用户名
+                    document.getElementById('adminUsername').textContent = `管理员：${data.username}`;
+                }
+            })
+            .catch(error => {
+                console.error('验证失败:', error);
+                localStorage.removeItem('adminToken');
+                window.location.href = '/login.html';
+            });
+        }
+
+        // 加载日志数据
+        function loadLogs() {
+            const search = document.getElementById('search').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            
+            // 构建查询参数
+            const params = new URLSearchParams({
+                page: currentPage,
+                pageSize: pageSize
+            });
+            
+            // 添加日志级别筛选
+            if (selectedLevels.length === 1) {
+                params.append('level', selectedLevels[0]);
+            }
+            
+            if (search) {
+                params.append('search', search);
+            }
+            
+            if (startTime) {
+                try {
+                    params.append('startTime', new Date(startTime).toISOString());
+                } catch (e) {
+                    console.error('开始时间格式错误', e);
+                }
+            }
+            
+            if (endTime) {
+                try {
+                    params.append('endTime', new Date(endTime).toISOString());
+                } catch (e) {
+                    console.error('结束时间格式错误', e);
+                }
+            }
+            
+            // 输出请求URL便于调试
+            console.log(`请求URL: /v1/logs?${params.toString()}`);
+            
+            // 发起请求
+            fetch(`/v1/logs?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('加载日志失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    renderLogs(data.data);
+                } else {
+                    showMessage('加载日志失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载日志错误:', error);
+                showMessage('加载日志错误：' + error.message);
+            });
+        }
+
+        // 清空日志
+        function clearLogs() {
+            fetch('/v1/logs', {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('清空日志失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    loadLogs();
+                    showMessage('日志已清空');
+                } else {
+                    showMessage('清空日志失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('清空日志错误:', error);
+                showMessage('清空日志错误：' + error.message);
+            });
+        }
+
+        // 渲染日志数据
+        function renderLogs(data) {
+            const logsList = document.getElementById('logsList');
+            logsList.innerHTML = '';
+            
+            if (!data.logs || data.logs.length === 0) {
+                logsList.innerHTML = '<tr><td colspan="3" style="text-align: center;">没有符合条件的日志</td></tr>';
+                document.getElementById('prevPage').disabled = true;
+                document.getElementById('nextPage').disabled = true;
+                document.getElementById('currentRange').textContent = '0-0';
+                document.getElementById('totalLogs').textContent = '0';
+                return;
+            }
+            
+            // 要屏蔽的请求路径
+            const excludePaths = [
+                'GET /styles.css', 
+                'GET /v1/logs', 
+                'GET /logs.html'
+            ];
+            
+            // 根据用户设置决定是否过滤日志
+            let logsToRender = data.logs;
+            let totalToShow = data.total;
+            
+            if (hideCommonLogs) {
+                // 过滤掉不需要显示的日志
+                logsToRender = data.logs.filter(log => {
+                    if (log.level === 'HTTP') {
+                        // 检查是否为要屏蔽的请求路径
+                        for (const path of excludePaths) {
+                            if (log.message.includes(path)) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                });
+                
+                // 如果过滤后没有日志
+                if (logsToRender.length === 0) {
+                    logsList.innerHTML = '<tr><td colspan="3" style="text-align: center;">没有符合条件的日志</td></tr>';
+                    document.getElementById('prevPage').disabled = true;
+                    document.getElementById('nextPage').disabled = true;
+                    document.getElementById('currentRange').textContent = '0-0';
+                    document.getElementById('totalLogs').textContent = '0';
+                    return;
+                }
+                
+                // 更新总数
+                totalToShow = data.total - (data.logs.length - logsToRender.length);
+            }
+            
+            // 更新总数和分页信息
+            totalLogs = totalToShow;
+            const start = (currentPage - 1) * pageSize + 1;
+            const end = Math.min(currentPage * pageSize, totalToShow);
+            document.getElementById('currentRange').textContent = `${start}-${end}`;
+            document.getElementById('totalLogs').textContent = totalToShow;
+            
+            // 更新分页按钮状态
+            document.getElementById('prevPage').disabled = currentPage <= 1;
+            document.getElementById('nextPage').disabled = end >= totalToShow;
+            
+            // 渲染日志列表
+            logsToRender.forEach(log => {
+                const row = document.createElement('tr');
+                
+                // 格式化时间
+                const timestamp = new Date(log.timestamp);
+                const formattedTime = timestamp.toLocaleString('zh-CN');
+                
+                row.innerHTML = `
+                    <td>${formattedTime}</td>
+                    <td><span class="log-level log-level-${log.level}">${log.level}</span></td>
+                    <td>${log.message}</td>
+                `;
+                
+                logsList.appendChild(row);
+            });
+        }
+
+        // 显示消息
+        function showMessage(message) {
+            alert(message);
+        }
+        
+        // 添加token到所有日志API请求
+        (function() {
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options = {}) {
+                // 如果是日志API请求，添加token
+                if (url.includes('/v1/logs') && !url.includes('/v1/admin/')) {
+                    const token = localStorage.getItem('adminToken');
+                    options.headers = {
+                        ...options.headers,
+                        'Authorization': `Bearer ${token}`
+                    };
+                }
+                return originalFetch(url, options);
+            };
+        })();
+    </script>
+</body>
+</html> 
