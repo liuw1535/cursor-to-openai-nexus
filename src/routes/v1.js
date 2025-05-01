@@ -597,16 +597,15 @@ let isFirst = true;
             break; // 跳出循环，不再处理后续数据
           }
 
-	  	      if (isFirst) {
+          let text = result.content;
+	  	      if (text &&text.length>0 && isFirst) {
       		res.setHeader('Content-Type', 'text/event-stream');
       		res.setHeader('Cache-Control', 'no-cache');
       		res.setHeader('Connection', 'keep-alive');
 		isFirst = false;
 	      }
+ 
 
-
-
-          let text = result.content;
           if (result.isThink && isThinking_status == 0)
           {
             isThinking_status = 1; //存在思考内容，并且状态为开始思考
@@ -640,6 +639,13 @@ let isFirst = true;
         
         // 只有在响应尚未结束的情况下，才发送结束标记
         if (!responseEnded) {
+	  if (isFirst) {
+			   	res.status(500).json('request error');
+		return;
+
+	  }
+
+
           res.write('data: [DONE]\n\n');
           res.end();
         }
@@ -771,6 +777,11 @@ let isFirst = true;
           text = text.replace(/^.*<\|END_USER\|>/s, '');
           text = text.replace(/^\n[a-zA-Z]?/, '').trim();
           // console.log(text)
+		//
+          if (text.length < 15) {
+		            res.status(500).json('reponse failed');
+		  return;
+	  }
 
           res.json({
             id: `chatcmpl-${uuidv4()}`,
