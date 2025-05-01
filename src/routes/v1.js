@@ -395,8 +395,15 @@ router.post('/chat/completions', async (req, res) => {
   }
 
   try {
-    const { model, messages, stream = false } = req.body;
+    let { model, messages, stream = false } = req.body;
     let bearerToken = req.headers.authorization?.replace('Bearer ', '');
+   
+    if (model == "cur-claude-3-7-sonnet") {
+	    model = "claude-3-7-sonnet-20250219";
+    }
+    if (model == "cur-claude-3-5-sonnet") {
+        model = "claude-3-5-sonnet-20241022";
+    }
     
     // 使用keyManager获取实际的cookie
     let authToken = keyManager.getCookieForApiKey(bearerToken);
@@ -529,10 +536,7 @@ router.post('/chat/completions', async (req, res) => {
 
     // 处理响应
     if (stream) {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-
+let isFirst = true;
       const responseId = `chatcmpl-${uuidv4()}`;
       
       let isThinking_status = 0; //0为没有思考，1为处于思考状态
@@ -568,7 +572,8 @@ router.post('/chat/completions', async (req, res) => {
                 errorResult.message = `⚠️ 目前Cookie已从API Key中移除 ⚠️\n\n${errorResult.message}`;
               }
             }
-            
+            res.status(500).json('request error');
+		  return;
             // 返回错误信息给客户端，作为assistant消息
             res.write(
               `data: ${JSON.stringify({
@@ -580,7 +585,7 @@ router.post('/chat/completions', async (req, res) => {
                   {
                     index: 0,
                     delta: {
-                      content: errorResult.message,
+                      content: '',
                     },
                   },
                 ],
@@ -591,6 +596,16 @@ router.post('/chat/completions', async (req, res) => {
             responseEnded = true; // 标记响应已结束
             break; // 跳出循环，不再处理后续数据
           }
+
+	  	      if (isFirst) {
+      		res.setHeader('Content-Type', 'text/event-stream');
+      		res.setHeader('Cache-Control', 'no-cache');
+      		res.setHeader('Connection', 'keep-alive');
+		isFirst = false;
+	      }
+
+
+
           let text = result.content;
           if (result.isThink && isThinking_status == 0)
           {
@@ -634,6 +649,8 @@ router.post('/chat/completions', async (req, res) => {
         if (!res.writableEnded) {
           if (streamError.name === 'TimeoutError') {
             // 将超时错误作为assistant消息发送
+		res.status(500).json('request error');
+		  return;
             const errorMessage = `⚠️ 请求超时 ⚠️\n\n错误：服务器响应超时，请稍后重试。`;
             res.write(
               `data: ${JSON.stringify({
@@ -645,13 +662,15 @@ router.post('/chat/completions', async (req, res) => {
                   {
                     index: 0,
                     delta: {
-                      content: errorMessage,
+                      content: '',
                     },
                   },
                 ],
               })}\n\n`
             );
           } else {
+		  res.status(500).json('request error');
+		  return;
             // 将处理错误作为assistant消息发送
             const errorMessage = `⚠️ 处理错误 ⚠️\n\n错误：流处理出错，请稍后重试。\n\n${streamError.message || ''}`;
             res.write(
@@ -664,7 +683,7 @@ router.post('/chat/completions', async (req, res) => {
                   {
                     index: 0,
                     delta: {
-                      content: errorMessage,
+                      content: '',
                     },
                   },
                 ],
@@ -710,7 +729,8 @@ router.post('/chat/completions', async (req, res) => {
                 errorResult.message = `⚠️ 目前Cookie已从API Key中移除 ⚠️\n\n${errorResult.message}`;
               }
             }
-            
+            res.status(500).json('request error');
+		  return;
             // 无效cookie错误，格式化为assistant消息
             res.json({
               id: `chatcmpl-${uuidv4()}`,
@@ -775,6 +795,8 @@ router.post('/chat/completions', async (req, res) => {
           });
         }
       } catch (error) {
+	      res.status(500).json('request error');
+	      return;
         logger.error('Non-stream error:', error);
         // 确保在发送错误信息前检查响应是否已结束
         if (!res.headersSent) {
@@ -808,6 +830,8 @@ router.post('/chat/completions', async (req, res) => {
       }
     }
   } catch (error) {
+	  res.status(500).json('request error');
+	  return;
     logger.error('Error:', error);
     if (!res.headersSent) {
       const errorText = error.name === 'TimeoutError' ? '请求超时' : '服务器内部错误';
