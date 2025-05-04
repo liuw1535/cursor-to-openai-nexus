@@ -467,8 +467,15 @@ router.post('/chat/completions', async (req, res) => {
     
     if (useTlsProxy) {
       // 使用JA3指纹伪造代理服务器
+	const startPort = 8081;
+	const endPort = 8120;
+	const randomPort = Math.floor(Math.random() * (endPort - startPort + 1)) + startPort;
+
+// 动态构建URL
+	const url = `http://localhost:${randomPort}/proxy`;
+	    //
       logger.info(`使用TLS代理服务器`);
-      response = await fetch('http://localhost:8080/proxy', {
+      response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
